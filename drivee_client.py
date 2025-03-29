@@ -6,94 +6,26 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 from models import ChargingHistory, ChargingHistoryEntry, ChargingSessionResponse
+from graph_utils import create_power_graph
 
-# Load environment variables
-load_dotenv()
 
-def create_power_graph(power_stats: Dict[str, Any], width: int = 60, height: int = 10) -> str:
-    """
-    Create an ASCII graph of power stats.
-    
-    Args:
-        power_stats: Dictionary containing power statistics with history, averageKw, and maxKw keys
-        width: Width of the graph in characters
-        height: Height of the graph in characters
-        
-    Returns:
-        str: ASCII graph representation
-    """
-    if not power_stats or 'history' not in power_stats:
-        return "No power stats available"
-    
-    # Extract power values and timestamps from history
-    powers = []
-    timestamps = []
-    for entry in power_stats['history']:
-        try:
-            power = float(entry['value'])
-            timestamp = datetime.fromisoformat(entry['timestamp'].replace('Z', '+00:00'))
-            powers.append(power)
-            timestamps.append(timestamp)
-        except (ValueError, TypeError, KeyError):
-            continue
-    
-    if not powers:
-        return "No valid power data available"
-    
-    # Find min and max values
-    min_power = min(powers)
-    max_power = max(powers)
-    power_range = max_power - min_power
-    
-    if power_range == 0:
-        return "No power variation to graph"
-    
-    # Create the graph
-    graph = []
-    for y in range(height - 1, -1, -1):
-        threshold = min_power + (power_range * y / (height - 1))
-        row = [' '] * width  # Initialize row with spaces
-        
-        # Fill in the bars
-        for i, power in enumerate(powers):
-            if i < width and power >= threshold:
-                row[i] = '█'
-        
-        # Add power value at the end of each row
-        row.append(f' {threshold:.1f}kW')
-        graph.append(''.join(row))
-    
-    # Add time labels at the bottom
-    time_labels = []
-    for i in range(0, len(timestamps), len(timestamps) // 5):
-        time = timestamps[i]
-        time_labels.append(time.strftime('%H:%M'))
-    
-    graph.append('-' * width)
-    graph.append(' '.join(time_labels))
-    
-    return '\n'.join(graph)
 
 class DriveeClient:
     """Client for interacting with Drivee REST API."""
     
-    def __init__(self, username: Optional[str] = None, password: Optional[str] = None, device_id: str = "b1a9feedadc049ba", app_version: str = "2.126.0"):
+    def __init__(self, username: str, password: str, device_id: str = "b1a9feedadc049ba", app_version: str = "2.126.0"):
         """
         Initialize the Drivee client.
         
         Args:
-            username (str, optional): Drivee account username/email. If not provided, will use DRIVEE_USERNAME env var
-            password (str, optional): Drivee account password. If not provided, will use DRIVEE_PASSWORD env var
+            username (str): Drivee account username/email
+            password (str): Drivee account password
             device_id (str): Device ID for API requests
             app_version (str): App version for API requests
         """
         self.base_url = "https://drivee.eu.charge.ampeco.tech/api/v1"
-        self.username = username or os.getenv("DRIVEE_USERNAME")
-        self.password = password or os.getenv("DRIVEE_PASSWORD")
-        
-        if not self.username or not self.password:
-            raise ValueError("Username and password must be provided either directly or through environment variables DRIVEE_USERNAME and DRIVEE_PASSWORD")
-            
+        self.username = username
+        self.password = password
         self.device_id = device_id
         self.app_version = app_version
         self.session = None
@@ -246,67 +178,4 @@ class DriveeClient:
             return ChargingSessionResponse.from_dict(data)
         except aiohttp.ClientError as e:
             self.logger.error(f"Failed to get charging session {session_id}: {str(e)}")
-            return None
-
-# Example usage
-async def main():
-    async with DriveeClient() as client:  # No need to pass credentials, will use env vars
-        try:
-            # First get all charging history for March 2025
-            print("Fetching charging history...")
-            history = await client.get_charging_history(
-                start_date="2025-03-01",
-                end_date="2025-03-29"
-            )
-            
-            print(f"\nFound {len(history.session_history)} charging sessions")
-            
-            # First show summary of all sessions
-            print(f"\n{'='*50}")
-            print(f"Charging Sessions Summary:")
-            print(f"{'='*50}")
-            for entry in history.session_history:
-                print(f"\nSession ID: {entry.session.id}")
-                print(f"Started: {entry.session.started_at}")
-                print(f"Stopped: {entry.session.stopped_at}")
-                print(f"Energy Used: {entry.session.energy / 1000:.2f} kWh")
-                print(f"Amount: {entry.session.amount} {entry.session.currency.suffix}")
-            print(f"{'='*50}")
-            
-            # Then get detailed information for each session
-            for entry in history.session_history:
-                session_id = entry.session.id
-       
-                
-                # Get detailed session information
-                session_response = await client.get_charging_session(session_id)
-                
-                if session_response:
-                    print(f"\n{'='*50}")
-                    print(f"Detailed Charging Session Information:")
-                    print(f"{'='*50}")
-                    print(f"Session ID: {session_response.session.id}")
-                    print(f"\nTiming Information:")
-                    print(f"  Started: {session_response.session.started_at}")
-                    print(f"  Stopped: {session_response.session.stopped_at}")
-                    print(f"  Duration: {session_response.session.duration} seconds")
-                    print(f"  Total Duration: {session_response.session.total_duration} seconds")
-                    print(f"\nEnergy Information:")
-                    print(f"  Energy Used: {session_response.session.energy / 1000:.2f} kWh")
-                    
-                    # Add power graph if power stats are available
-                    if session_response.session.power_stats:
-                        print(f"\nPower Graph:")
-                        print(f"Average Power: {session_response.session.power_stats.get('averageKw', 0):.1f} kW")
-                        print(f"Maximum Power: {session_response.session.power_stats.get('maxKw', 0):.1f} kW")
-                        print(create_power_graph(session_response.session.power_stats))
-                    
-                    print(f"{'='*50}\n")
-                else:
-                    print(f"Session {session_id} not found")
-            
-        except Exception as e:
-            print(f"Error: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(main()) 
+            return None 
