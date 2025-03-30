@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import aiohttp
 from aiohttp import ClientSession
 
-from .models import (
+from models import (
     ChargePointsResponse,
     StartChargingResponse,
+    ChargingHistory,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,20 +133,32 @@ class DriveeClient:
 
     async def get_charging_history(
         self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-    ) -> Any:
-        """Get charging history for a date range."""
+        start_date: Optional[Union[str, datetime]] = None,
+        end_date: Optional[Union[str, datetime]] = None,
+    ) -> ChargingHistory:
+        """Get charging history for a date range.
+        
+        Args:
+            start_date: Start date as datetime object or string in YYYY-MM-DD format
+            end_date: End date as datetime object or string in YYYY-MM-DD format
+        """
         if not start_date:
             start_date = datetime.now() - timedelta(days=30)
         if not end_date:
             end_date = datetime.now()
 
+        # Convert string dates to datetime objects if needed
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+
         params = {
             "start_date": start_date.strftime("%Y-%m-%d"),
             "end_date": end_date.strftime("%Y-%m-%d"),
         }
-        return await self._make_request("GET", "app/profile/session_history", params=params)
+        data = await self._make_request("GET", "app/profile/session_history", params=params)
+        return ChargingHistory.from_dict(data)
 
     async def start_charging(self, evse_id: str) -> StartChargingResponse:
         """Start charging on a specific EVSE."""
