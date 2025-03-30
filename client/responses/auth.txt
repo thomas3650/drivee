@@ -1,0 +1,29 @@
+URL
+https://drivee.eu.charge.ampeco.tech/api/v1/app/oauth/token
+Request Headers
+accept: application/json, text/plain, */*
+accept-language: da-DK
+x-device-id: b1a9feedadc049ba
+x-app-version: 2.126.0
+Content-Type: application/json;charset=utf-8
+Content-Length: 159
+Host: drivee.eu.charge.ampeco.tech
+Connection: Keep-Alive
+Accept-Encoding: gzip
+User-Agent: okhttp/4.9.2
+Request Body
+{"username":"xxx","password":"xxx","grant_type":"password","client_id":"1","client_secret":"xxx"}
+Response Headers
+Date: Sun, 30 Mar 2025 19:47:35 GMT
+Content-Type: application/json; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: nginx
+pragma: no-cache
+Cache-Control: no-store, private
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 4
+x-req-trace-id: Root=1-67e99fd7-1ba38c125e7c4e500443f268
+Access-Control-Allow-Origin: *
+Response Content
+{"token_type":"Bearer","expires_in":31536000,"access_token":"xxx"}

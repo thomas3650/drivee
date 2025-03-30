@@ -1,35 +1,42 @@
-"""The drivee integration."""
+"""The Drivee integration."""
 
 from __future__ import annotations
+
+import logging
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .client.drivee_client import DriveeClient
+
+_LOGGER = logging.getLogger(__name__)
+
 # TODO List the platforms that you want to support.
 # For your initial PR, limit it to 1 platform.
-_PLATFORMS: list[Platform] = [Platform.LIGHT]
+PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-# TODO Create ConfigEntry type alias with API object
-# TODO Rename type alias and update all entry annotations
-type New_NameConfigEntry = ConfigEntry[MyApi]  # noqa: F821
-
-
-# TODO Update entry annotation
-async def async_setup_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> bool:
-    """Set up drivee from a config entry."""
-
-    # TODO 1. Create API instance
-    # TODO 2. Validate the API connection (and authentication)
-    # TODO 3. Store an API object for your platforms to access
-    # entry.runtime_data = MyAPI(...)
-
-    await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
-
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Drivee from a config entry."""
+    hass.data.setdefault("drivee", {})
+    
+    # Create DriveeClient instance
+    client = DriveeClient(
+        username=entry.data["username"],
+        password=entry.data["password"],
+        device_id=entry.data.get("device_id", "b1a9feedadc049ba"),
+        app_version=entry.data.get("app_version", "2.126.0")
+    )
+    
+    # Store client in hass.data
+    hass.data["drivee"][entry.entry_id] = client
+    
+    # Set up platforms
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    
     return True
 
-
-# TODO Update entry annotation
-async def async_unload_entry(hass: HomeAssistant, entry: New_NameConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, _PLATFORMS)
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

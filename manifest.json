@@ -1,15 +1,20 @@
 {
   "domain": "drivee",
-  "name": "drivee",
+  "name": "Drivee",
+  "documentation": "https://github.com/thomas3650/drivee",
+  "dependencies": [],
   "codeowners": [
     "@thomas3650"
   ],
+  "requirements": [
+    "aiohttp",
+    "python-dotenv"
+  ],
+  "version": "0.1.0",
   "config_flow": true,
-  "dependencies": [],
-  "documentation": "https://www.home-assistant.io/integrations/drivee",
-  "homekit": {},
-  "iot_class": "cloud_polling",
-  "requirements": [],
-  "ssdp": [],
-  "zeroconf": []
+  "iot_standards": [
+    "cloud_polling"
+  ],
+  "logotype": "drivee.png",
+  "quality_scale": "platinum"
 }
