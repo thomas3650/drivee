@@ -112,62 +112,45 @@ async def display_charging_history(client: DriveeClient, days: int = 30):
 
 async def display_charge_points(client: DriveeClient):
     """
-    Fetch and display information about all charge points.
+    Fetch and display information about the charge point.
     
     Args:
         client (DriveeClient): The Drivee client instance
     """
-    logger.info("Checking charge points status...")
-    charge_points = await client.get_charge_points()
+    logger.info("Checking charge point status...")
+    charge_point = await client.get_charge_point()
     
-    # Calculate totals
-    total_evses = 0
-    total_connectors = 0
-    active_sessions = 0
-    total_active_power = 0
-    total_active_energy = 0
+    if not charge_point:
+        logger.info("No charge point found")
+        return
+
+    logger.info("\nCharge Point Summary:")
+    logger.info(f"\nCharge Point: {charge_point.name}")
+    logger.info(f"Status: {charge_point.status}")
+    logger.info(f"Max Power: {charge_point.allowed_max_power_kw}kW")
+    logger.info(f"Smart Charging: {'Enabled' if charge_point.scheduling_intervals.off_peak_is_set else 'Disabled'}")
     
-    logger.info("\nCharge Points Summary:")
+    # Get the EVSE
+    evse = charge_point.evse
+    logger.info(f"\nEVSE Status: {evse.status}")
+    logger.info(f"Max Power: {evse.max_power/1000:.1f}kW")
+    logger.info(f"Current Type: {evse.current_type}")
     
-    for charge_point in charge_points.data:
-        total_evses += len(charge_point.evses)
-        total_connectors += sum(len(evse.connectors) for evse in charge_point.evses)
+    # Get the single connector
+    if evse.connectors:
+        connector = evse.connectors[0]
+        logger.info(f"\nConnector:")
+        logger.info(f"Name: {connector.name}")
+        logger.info(f"Status: {connector.status}")
         
-        logger.info(f"\nCharge Point: {charge_point.name}")
-        logger.info(f"Status: {charge_point.status}")
-        logger.info(f"Max Power: {charge_point.allowed_max_power_kw}kW")
-        logger.info(f"Smart Charging: {'Enabled' if charge_point.scheduling_intervals.off_peak_is_set else 'Disabled'}")
-        
-        for evse in charge_point.evses:
-            logger.info(f"\n  EVSE {evse.id}:")
-            logger.info(f"  Status: {evse.status}")
-            logger.info(f"  Max Power: {evse.max_power/1000:.1f}kW")
-            logger.info(f"  Current Type: {evse.current_type}")
-            
-            for connector in evse.connectors:
-                logger.info(f"    Connector {connector.name}: {connector.status}")
-                
-            if evse.session:
-                active_sessions += 1
-                session = evse.session
-                total_active_power += session.power
-                total_active_energy += session.energy
-                logger.info(f"    Active Session:")
-                logger.info(f"      Started: {session.started_at}")
-                logger.info(f"      Duration: {format_duration(session.duration)}")
-                logger.info(f"      Energy: {session.energy/1000:.1f}kWh")
-                logger.info(f"      Power: {session.power/1000:.1f}kW")
-                logger.info(f"      Cost: {session.amount} {session.currency.symbol}")
-    
-    # Display summary
-    logger.info("\nCharge Points Summary:")
-    logger.info(f"Total Charge Points: {len(charge_points.data)}")
-    logger.info(f"Total EVSEs: {total_evses}")
-    logger.info(f"Total Connectors: {total_connectors}")
-    logger.info(f"Active Charging Sessions: {active_sessions}")
-    if active_sessions > 0:
-        logger.info(f"Total Active Power: {total_active_power/1000:.1f}kW")
-        logger.info(f"Total Active Energy: {total_active_energy/1000:.1f}kWh")
+    if evse.session:
+        session = evse.session
+        logger.info(f"\nActive Session:")
+        logger.info(f"Started: {session.started_at}")
+        logger.info(f"Duration: {format_duration(session.duration)}")
+        logger.info(f"Energy: {session.energy/1000:.1f}kWh")
+        logger.info(f"Power: {session.power/1000:.1f}kW")
+        logger.info(f"Cost: {session.amount} {session.currency.symbol}")
 
 async def main():
     """Main function to run the Drivee client."""
@@ -178,9 +161,7 @@ async def main():
             # Display charge points status
             await display_charge_points(client)
             
-            # Display charging history
             await display_charging_history(client, 30)
-            
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         raise

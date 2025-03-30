@@ -1,0 +1,27 @@
+URL
+https://drivee.eu.charge.ampeco.tech/api/v1/app/session/648418/end
+Request Headers
+accept: application/json, text/plain, */*
+accept-language: da-DK
+x-device-id: b1a9feedadc049ba
+x-app-version: 2.126.0
+authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiOTQ5ZWMyZTRjN2EwYzViMTc5YjNmMTY5YjY1NTc3MTUxMDU3YmIwMmUxMjgyMzc5OGI5ZTY1ZGYwZmU0NWY0ODdiMGU2ZTgwN2NjODNiZDciLCJpYXQiOjE3NDMzNjc2MzMuMzA0MDI5LCJuYmYiOjE3NDMzNjc2MzMuMzA0MDMxLCJleHAiOjE3NzQ5MDM2MzMuMjg0NzExLCJzdWIiOiIzMjcyIiwic2NvcGVzIjpbXX0.M0cGEwM8CWppKGc2XAyBPEQu5gaszM_Ws-MuLARSD02Nuj3tgE5U0O9G6hz8jaLoR1f4K7El87Ilq7_8QPpA2oIap_MRz2PIZEC2Gp5Vzvy7ZnYQxpolueX71yxWEQUyFTMXedXZ1fPGmBuK2s64eceG8CvjadJwtIYGD-wyduCVLg4lLE8FEgyAkVucE47bkKxMMODvEX8twt1wWhIs-Nxt0hQlc3JpysrokItV6q8nZafQZA-Dbg8bbmOxVly-LmraptFNvqY5Lfo_F6tOOauclbfh6yJm2p6-G3ddLqiEa7anCjOCOpV1awPLxGC4ZGKvEQ4RAW_KVfr_UsGHydfEmeBC-VPQ_E1RwA98AuBl6_PMyDIjRstimzMxzR4b6USEhG3ebPSPQHe4BGJ6Ym2yD4sp5_l_tUcehmYK0D4_XGWbNStqjC-Ugdo3jGRPusZADmvcwreo4pjnzIpjSCsksRruFbyA7Q7EazV9kf8cJCBS5JiafYXn2F5PuTrmyBMlQlgSY43OcXPm5YACXRP1bUeAIzG_zduHZsJ71sLcCMtIk3y6KNTEjcXQVnIjKjplopoxZCvu3cpWMowK-usg8Luhr3hQDM7VbMY_TXoplJ-tbK5iCcDbrHgJPuzNBs6VfSAKYnNo079Xj8YiVBbIn26V-5N8AtihlQnHGok
+x-internal-app-version: 2.126.0
+Content-Length: 0
+Host: drivee.eu.charge.ampeco.tech
+Connection: Keep-Alive
+Accept-Encoding: gzip
+User-Agent: okhttp/4.9.2
+Request Body
+not available
+Response Headers
+Date: Sun, 30 Mar 2025 20:47:24 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: nginx
+Cache-Control: no-cache, private
+x-req-trace-id: Root=1-67e9addc-14b9213d5dd466c94485edb2
+Access-Control-Allow-Origin: *
+Response Content
+{"session":{"id":"648418","startedAt":"2025-03-30T14:33:51+00:00","duration":22382,"totalDuration":22382,"energy":489,"power":3481,"locationId":null,"evseId":"2317","evseStatus":"charging","paymentMethodId":"6813","paymentMethodType":"card","amount":2.5,"totalAmount":2.5,"amountDue":2.5,"status":"stopping","summarySeen":false,"paymentStatus":"pending","paymentDetails":null,"isExtending":false,"isExtended":false,"isOptimized":false,"stopReason":null,"chargingState":"charging","isSessionTimedOut":false,"stoppedAt":null,"isPersonal":true,"reimbursementEligibility":false,"canToggleReimbursementEligibility":false,"hasThirdPartyElectricityCostIntegrationEnabled":null,"nonBillableEnergy":0,"currencyId":2,"currency":{"id":2,"name":"DKK (Danish Krone)","symbol":"removed","sign":"DKK","code":"DKK","formatter":"%0.02fDKK","unitPriceFormatter":"%0.03fDKK","updatedAt":"2021-06-30T12:45:44Z","minorUnitDecimal":2,"hasPrefix":false,"hasSuffix":true,"prefix":null,"suffix":"DKK"},"smartCharging":{"enabled":false,"mode":"schedule","target_charge":{"min_kwh":"50"},"use_solar":false,"use_all_generated_solar":null,"max_current_from_grid_a":null,"solar_stable_time_sec":null,"dynamic_rates_integration_id":null,"start_time":"23:00:00","end_time":"06:00:00","weekdays":null},"electricityCost":0,"electricityCostCurrencyId":2,"powerAvg":0,"isUsingChargingAllowance":false,"freeEnergyWh":0,"scaPendingTransaction":null,"idlePeriod":21600,"isRemoteStopEnabled":true,"isBalancePaymentPending":false,"lastPeriod":{"startedAt":"2025-03-30T20:38:52.000000Z","stoppedAt":null,"state":"charging@price|0.41486&markup|1","durationInSeconds":null,"amount":0.70634,"graceTimeEnd":null,"freeEnergyWh":0,"maxAllowanceWh":0},"idleFeeEligible":false}}

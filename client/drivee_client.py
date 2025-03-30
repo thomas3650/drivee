@@ -10,7 +10,7 @@ import aiohttp
 from aiohttp import ClientSession
 
 from .models import (
-    ChargePointsResponse,
+    ChargePoint,
     StartChargingResponse,
     ChargingHistory,
 )
@@ -126,10 +126,16 @@ class DriveeClient:
             
             return await response.json()
 
-    async def get_charge_points(self) -> ChargePointsResponse:
-        """Get all charge points."""
+    async def get_charge_point(self) -> Optional[ChargePoint]:
+        """Get the first charge point.
+        
+        Returns:
+            The first charge point or None if no charge points are available.
+        """
         data = await self._make_request("GET", "app/personal/charge-points")
-        return ChargePointsResponse.from_dict(data)
+        if not data or not data.get("data"):
+            return None
+        return ChargePoint.from_dict(data["data"][0])
 
     async def get_charging_history(
         self,
@@ -159,6 +165,18 @@ class DriveeClient:
         }
         data = await self._make_request("GET", "app/profile/session_history", params=params)
         return ChargingHistory.from_dict(data)
+
+    async def end_charging(self, session_id: str) -> dict[str, Any]:
+        """End charging for a specific session.
+        
+        Args:
+            session_id: The ID of the charging session to end
+            
+        Returns:
+            The API response containing the session details
+        """
+        data = await self._make_request("POST", f"app/session/{session_id}/end")
+        return data
 
     async def start_charging(self, evse_id: str) -> StartChargingResponse:
         """Start charging on a specific EVSE."""
