@@ -1,0 +1,545 @@
+{
+  "locations": [
+    {
+      "id": 63188,
+      "name": "Refshalevej 0",
+      "address": "Refshalevej 0",
+      "description": "Authentication modes: NFC RFID Classic, REMOTE\nPayment Options: Direct, Contract\nFree publicly accessible\nHotline: +4538171500\n",
+      "detailed_description": null,
+      "additional_description": null,
+      "location": "55.6940900,12.6252190",
+      "what3words_address": null,
+      "zones": [
+        {
+          "evses": [
+            {
+              "id": "156859",
+              "identifier": "DK*SPI*EZBYH0179*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0179*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0179*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "156860",
+              "identifier": "DK*SPI*EZBYH0177*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "charging",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": false,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0177*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0177*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "156861",
+              "identifier": "DK*SPI*EZBYH0176*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0176*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0176*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "156862",
+              "identifier": "DK*SPI*EZBYH0175*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0175*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0175*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "187245",
+              "identifier": "DK*SPI*EZBYH0284*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0284*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0284*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "187246",
+              "identifier": "DK*SPI*EZBYH0280*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0280*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0280*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "187247",
+              "identifier": "DK*SPI*EZBYH0272*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0272*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0272*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "187248",
+              "identifier": "DK*SPI*EZBYH0260*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22000,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "19",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "socket",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*SPI*EZBYH0260*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*SPI*EZBYH0260*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        }
+      ],
+      "updatedAt": "2024-07-12 01:49:53.000",
+      "workingHours": [],
+      "timezone": "Europe\/Copenhagen"
+    },
+    {
+      "id": 65427,
+      "name": "Ole Klokkersvej 22",
+      "address": "Ole Klokkersvej 22",
+      "description": "Authentication modes: NFC RFID Classic, REMOTE\nPayment Options: Contract\nFree publicly accessible\nHotline: +4586168888\n",
+      "detailed_description": null,
+      "additional_description": null,
+      "location": "55.6214470,12.5961700",
+      "what3words_address": null,
+      "zones": [
+        {
+          "evses": [
+            {
+              "id": "177738",
+              "identifier": "DK*CLE*E113338*2",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22080,
+              "currentType": "ac",
+              "status": "available",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": true,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "16",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "cable",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*CLE*E113338*2",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*CLE*E113338*2",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        },
+        {
+          "evses": [
+            {
+              "id": "177739",
+              "identifier": "DK*CLE*E113338*1",
+              "emi3Identifier": null,
+              "label": null,
+              "networkId": "1",
+              "maxPower": 22080,
+              "currentType": "ac",
+              "status": "charging",
+              "operatedBy": null,
+              "managedByOperator": true,
+              "reservationId": null,
+              "isAvailable": false,
+              "isTemporarilyUnavailable": false,
+              "isLongTermUnavailable": false,
+              "tariffId": "16",
+              "connectors": [
+                {
+                  "name": "Type 2",
+                  "icon": "type2",
+                  "format": "cable",
+                  "status": "active"
+                }
+              ],
+              "roamingEvseId": "DK*CLE*E113338*1",
+              "midMeterCertificationEndYear": null,
+              "qrUrl": "https:\/\/cp.drivee.dk\/public\/cs\/DK*CLE*E113338*1",
+              "capabilities": "REMOTE_START_STOP_CAPABLE,METER_VALUES",
+              "hasParkingBarrier": false,
+              "canReserve": false,
+              "corporateBillingAsDefaultPaymentMethod": null,
+              "hasSmartCharging": false,
+              "chargePointModel": null,
+              "operatorId": 1,
+              "socPercent": null
+            }
+          ]
+        }
+      ],
+      "updatedAt": "2024-12-16 03:15:04.000",
+      "workingHours": [],
+      "timezone": "Europe\/Copenhagen"
+    }
+  ],
+  "currencies": [
+    {
+      "id": 2,
+      "name": "DKK (Danish Krone)",
+      "symbol": "removed",
+      "sign": "DKK",
+      "code": "DKK",
+      "formatter": "%0.02fDKK",
+      "unitPriceFormatter": "%0.03fDKK",
+      "updatedAt": "2021-06-30T12:45:44Z",
+      "minorUnitDecimal": 2,
+      "hasPrefix": false,
+      "hasSuffix": true,
+      "prefix": null,
+      "suffix": "DKK"
+    }
+  ],
+  "tariffs": [
+    {
+      "id": "19",
+      "currencyCode": "DKK",
+      "description": null,
+      "additionalInformation": null,
+      "learnMoreUrl": null,
+      "isAdHoc": false,
+      "priceForEnergy": 4.5,
+      "priceForEnergyAtNight": null,
+      "priceForEnergyAtDay": null,
+      "priceForEnergyWhenOptimized": null,
+      "priceForDuration": null,
+      "priceForDurationAtNight": null,
+      "priceForDurationAtDay": null,
+      "pricingPeriodInMinutes": 1,
+      "durationFeeGracePeriod": null,
+      "priceForIdle": null,
+      "priceForIdleAtNight": null,
+      "priceForIdleAtDay": null,
+      "dayTariffStart": null,
+      "nightTariffStart": null,
+      "connectionFee": null,
+      "connectionFeeGracePeriodMinutes": null,
+      "connectionFeeGracePeriodKwh": null,
+      "minPrice": 2.5,
+      "priceForSession": null,
+      "regularUseMinutes": null,
+      "priceType": "duration+energy",
+      "powerLevels": null,
+      "idleFeeGracePeriodMinutes": null,
+      "optimisedTariffStart": null,
+      "optimisedTariffEnd": null,
+      "durationFeeFrom": null,
+      "durationFeeTo": null,
+      "defaultChargeByTime": null,
+      "defaultTopUpKwh": null,
+      "optimisedLabel": null,
+      "offPeakHoursLabel": null,
+      "peakHoursLabel": null,
+      "referenceRange": null,
+      "standardTariffIdleFee": null,
+      "standardTariffDurationFee": null,
+      "standardTariffFeePerKwh": null,
+      "standardTariffDurationLastUnit": null,
+      "pricePeriods": null
+    },
+    {
+      "id": "16",
+      "currencyCode": "DKK",
+      "description": null,
+      "additionalInformation": null,
+      "learnMoreUrl": null,
+      "isAdHoc": false,
+      "priceForEnergy": 4.25,
+      "priceForEnergyAtNight": null,
+      "priceForEnergyAtDay": null,
+      "priceForEnergyWhenOptimized": null,
+      "priceForDuration": null,
+      "priceForDurationAtNight": null,
+      "priceForDurationAtDay": null,
+      "pricingPeriodInMinutes": 1,
+      "durationFeeGracePeriod": null,
+      "priceForIdle": null,
+      "priceForIdleAtNight": null,
+      "priceForIdleAtDay": null,
+      "dayTariffStart": null,
+      "nightTariffStart": null,
+      "connectionFee": null,
+      "connectionFeeGracePeriodMinutes": null,
+      "connectionFeeGracePeriodKwh": null,
+      "minPrice": 2.5,
+      "priceForSession": null,
+      "regularUseMinutes": null,
+      "priceType": "duration+energy",
+      "powerLevels": null,
+      "idleFeeGracePeriodMinutes": null,
+      "optimisedTariffStart": null,
+      "optimisedTariffEnd": null,
+      "durationFeeFrom": null,
+      "durationFeeTo": null,
+      "defaultChargeByTime": null,
+      "defaultTopUpKwh": null,
+      "optimisedLabel": null,
+      "offPeakHoursLabel": null,
+      "peakHoursLabel": null,
+      "referenceRange": null,
+      "standardTariffIdleFee": null,
+      "standardTariffDurationFee": null,
+      "standardTariffFeePerKwh": null,
+      "standardTariffDurationLastUnit": null,
+      "pricePeriods": null
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
-from models import ChargingHistory, ChargingHistoryEntry, ChargingSessionResponse
+from models import ChargingHistory, ChargingHistoryEntry, ChargingSessionResponse, ChargePointsResponse, ChargePoint, EVSE, StartChargingResponse
 from graph_utils import create_power_graph
 
 
@@ -174,8 +174,81 @@ class DriveeClient:
             Optional[ChargingSessionResponse]: The charging session if found, None otherwise
         """
         try:
-            data = await self._make_request('GET', f'app/session/{session_id}?withPowerHistory=1&withSmartChargingSchedule=1&withTaxName=1')
+            data = await self._make_request('GET', f'app/session/{session_id}?withPowerHistory=1&withSmartChargingSchedule=1&withTaxName=1&withPowerStats=1')
             return ChargingSessionResponse.from_dict(data)
         except aiohttp.ClientError as e:
             self.logger.error(f"Failed to get charging session {session_id}: {str(e)}")
-            return None 
+            return None
+
+    async def get_charge_points(self) -> ChargePointsResponse:
+        """
+        Get the status of all charge points.
+        
+        Returns:
+            ChargePointsResponse: Response containing charge points data
+        """
+        data = await self._make_request('GET', 'app/personal/charge-points')
+        return ChargePointsResponse.from_dict(data)
+
+    async def get_charge_point_status(self, charge_point_id: str) -> Optional[ChargePoint]:
+        """
+        Get the status of a specific charge point.
+        
+        Args:
+            charge_point_id (str): The ID of the charge point to check
+            
+        Returns:
+            Optional[ChargePoint]: The charge point status if found, None otherwise
+        """
+        try:
+            response = await self.get_charge_points()
+            for charge_point in response.data:
+                if charge_point.id == charge_point_id:
+                    return charge_point
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to get charge point status: {str(e)}")
+            return None
+
+    async def get_evse_status(self, charge_point_id: str, evse_id: str) -> Optional[EVSE]:
+        """
+        Get the status of a specific EVSE (Electric Vehicle Supply Equipment).
+        
+        Args:
+            charge_point_id (str): The ID of the charge point
+            evse_id (str): The ID of the EVSE to check
+            
+        Returns:
+            Optional[EVSE]: The EVSE status if found, None otherwise
+        """
+        try:
+            charge_point = await self.get_charge_point_status(charge_point_id)
+            if not charge_point:
+                return None
+                
+            for evse in charge_point.evses:
+                if evse.id == evse_id:
+                    return evse
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to get EVSE status: {str(e)}")
+            return None
+
+    async def start_charging(self, evse_id: str, max_power: Optional[float] = None) -> StartChargingResponse:
+        """
+        Start charging on a specific EVSE.
+        
+        Args:
+            evse_id (str): The ID of the EVSE to start charging on
+            max_power (float, optional): Maximum power in kW to use for charging
+            
+        Returns:
+            StartChargingResponse: Response containing the charging session details
+        """
+        endpoint = f'app/evse/{evse_id}/start'
+        data = {}
+        if max_power is not None:
+            data['maxPower'] = max_power * 1000  # Convert kW to W
+            
+        response_data = await self._make_request('POST', endpoint, json=data)
+        return StartChargingResponse.from_dict(response_data) 

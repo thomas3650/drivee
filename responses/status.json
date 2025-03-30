@@ -1,0 +1,70 @@
+{
+  "data": [
+    {
+      "id": "2",
+      "name": "Service- og refusion",
+      "description": "Service- og refusionsabonnementet s\u00f8rger for, at du altid har en funktionsdygtig ladeboks og samtidig f\u00e5r elafgiften refunderet (kr\u00e6ver at du betaler elafgift p\u00e5 din str\u00f8m, og at afgiftsatsen er over EU's minimumssats).",
+      "order": 2,
+      "renewal_cycle": "monthly",
+      "price": 69,
+      "currency": {
+        "id": 2,
+        "name": "DKK (Danish Krone)",
+        "symbol": "removed",
+        "sign": "DKK",
+        "code": "DKK",
+        "formatter": "%0.02fDKK",
+        "unitPriceFormatter": "%0.03fDKK",
+        "updatedAt": "2021-06-30T12:45:44Z",
+        "minorUnitDecimal": 2,
+        "hasPrefix": false,
+        "hasSuffix": true,
+        "prefix": null,
+        "suffix": "DKK"
+      },
+      "currency_id": "2",
+      "charging_allowance_type": "none",
+      "charging_allowance_renewal_cycle": "as_renewal_cycle",
+      "ac_charging_allowance_kwh": 0,
+      "dc_charging_allowance_kwh": 0,
+      "combined_charging_allowance_kwh": 0,
+      "type": "pre-paid",
+      "fee_per_each_personal_charge_point": null,
+      "usage_threshold": null,
+      "post_paid_charging_sessions_accumulation": "none"
+    },
+    {
+      "id": "5",
+      "name": "Service",
+      "description": "Serviceabonnement",
+      "order": 5,
+      "renewal_cycle": "monthly",
+      "price": 29,
+      "currency": {
+        "id": 2,
+        "name": "DKK (Danish Krone)",
+        "symbol": "removed",
+        "sign": "DKK",
+        "code": "DKK",
+        "formatter": "%0.02fDKK",
+        "unitPriceFormatter": "%0.03fDKK",
+        "updatedAt": "2021-06-30T12:45:44Z",
+        "minorUnitDecimal": 2,
+        "hasPrefix": false,
+        "hasSuffix": true,
+        "prefix": null,
+        "suffix": "DKK"
+      },
+      "currency_id": "2",
+      "charging_allowance_type": "none",
+      "charging_allowance_renewal_cycle": "as_renewal_cycle",
+      "ac_charging_allowance_kwh": 0,
+      "dc_charging_allowance_kwh": 0,
+      "combined_charging_allowance_kwh": 0,
+      "type": "pre-paid",
+      "fee_per_each_personal_charge_point": null,
+      "usage_threshold": null,
+      "post_paid_charging_sessions_accumulation": "none"
+    }
+  ]
+}
