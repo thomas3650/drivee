@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import logging
-from drivee_client import DriveeClient
+from client.drivee_client import DriveeClient
 from graph_utils import create_power_graph, create_charging_periods_chart
 
 # Configure logging
