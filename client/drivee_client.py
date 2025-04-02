@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Dict
 
 import aiohttp
 from aiohttp import ClientSession
@@ -86,6 +86,7 @@ class DriveeClient:
         self,
         method: str,
         endpoint: str,
+        json: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
         """Make an authenticated request to the Drivee API."""
@@ -112,12 +113,25 @@ class DriveeClient:
             "User-Agent": "okhttp/4.9.2"
         }
 
-        async with self._session.request(method, url, headers=headers, **kwargs) as response:
+        async with self._session.request(
+            method, 
+            url, 
+            headers=headers, 
+            json=json,
+            **kwargs
+        ) as response:
             if response.status == 401:
                 # Token expired, try to refresh
                 await self.authenticate()
                 headers["Authorization"] = f"Bearer {self._access_token}"
-                async with self._session.request(method, url, headers=headers, **kwargs) as retry_response:
+                async with self._session.request(
+                    method, 
+                    url, 
+                    headers=headers, 
+                    params=params,
+                    json=json,
+                    **kwargs
+                ) as retry_response:
                     if retry_response.status != 200:
                         raise Exception(f"API request failed: {await retry_response.text()}")
                     return await retry_response.json()
@@ -180,5 +194,9 @@ class DriveeClient:
 
     async def start_charging(self, evse_id: str) -> StartChargingResponse:
         """Start charging on a specific EVSE."""
-        data = await self._make_request("POST", f"app/evse/{evse_id}/start")
+        data = await self._make_request(
+            "POST", 
+            "app/session/start",
+            json={"evseId": evse_id}
+        )
         return StartChargingResponse.from_dict(data) 
