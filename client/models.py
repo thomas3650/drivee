@@ -312,15 +312,13 @@ class ChargePoint:
 @dataclass
 class StartChargingResponse:
     """Response model for start charging request."""
-    success: bool
-    message: str
+    session: ChargingSession
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'StartChargingResponse':
         """Create a StartChargingResponse instance from a dictionary."""
         return cls(
-            success=data['success'],
-            message=data['message']
+            session=ChargingSession.from_dict(data['session'])
         )
 
 @dataclass

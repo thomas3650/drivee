@@ -96,9 +96,19 @@ class DriveeClient:
             result = await response.json()
             self._access_token = result["access_token"]
             self._token_expires_at = datetime.now() + timedelta(seconds=result["expires_in"])
+        
+        # Get charge point and set EVSE ID
         charge_point = await self.get_charge_point()
+        if not charge_point:
+            raise Exception("No charge point found")
+            
         self.evse_id = charge_point.evse.id
-        self.session_id = charge_point.evse.session.id
+        
+        # Only set session_id if there is an active session
+        if charge_point.evse.session:
+            self.session_id = charge_point.evse.session.id
+        else:
+            self.session_id = None
 
     @retry(
         stop=stop_after_attempt(3),
@@ -224,6 +234,6 @@ class DriveeClient:
             "app/session/start",
             json={"evseId": self.evse_id}
         )
-        startChargingResponse =StartChargingResponse.from_dict(data) 
-        self.session_id = startChargingResponse.session_id
-        return startChargingResponse
+        response = StartChargingResponse.from_dict(data)
+        self.session_id = response.session.id
+        return response
