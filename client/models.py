@@ -324,6 +324,18 @@ class StartChargingResponse:
         )
 
 @dataclass
+class EndChargingResponse:
+    """Response model for end charging request."""
+    session: ChargingSession
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'EndChargingResponse':
+        """Create an EndChargingResponse instance from a dictionary."""
+        return cls(
+            session=ChargingSession.from_dict(data['session'])
+        )
+
+@dataclass
 class ChargingHistoryEntry:
     """Model for a charging history entry."""
     session: ChargingSession

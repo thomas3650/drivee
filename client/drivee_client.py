@@ -8,14 +8,26 @@ from typing import Any, Optional, Union, Dict
 
 import aiohttp
 from aiohttp import ClientSession
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    RetryError
+)
 
 from .models import (
     ChargePoint,
     StartChargingResponse,
     ChargingHistory,
+    EndChargingResponse,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+class AuthenticationError(Exception):
+    """Raised when authentication fails."""
+    pass
 
 class DriveeClient:
     """Client for interacting with the Drivee REST API."""
@@ -36,6 +48,8 @@ class DriveeClient:
         self._token_expires_at: Optional[datetime] = None
         self._session: Optional[ClientSession] = None
         self._base_url = "https://drivee.eu.charge.ampeco.tech/api/v1"
+        self.evse_id: Optional[str] = None
+        self.session_id: Optional[str] = None
 
     async def __aenter__(self) -> "DriveeClient":
         """Async context manager entry."""
@@ -49,6 +63,7 @@ class DriveeClient:
             await self._session.close()
             self._session = None
 
+    
     async def authenticate(self) -> None:
         """Authenticate with the Drivee API."""
         if not self._session:
@@ -81,13 +96,21 @@ class DriveeClient:
             result = await response.json()
             self._access_token = result["access_token"]
             self._token_expires_at = datetime.now() + timedelta(seconds=result["expires_in"])
+        charge_point = await self.get_charge_point()
+        self.evse_id = charge_point.evse.id
+        self.session_id = charge_point.evse.session.id
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type(AuthenticationError),
+        reraise=True
+    )
     async def _make_request(
         self,
         method: str,
         endpoint: str,
         json: Optional[Dict[str, Any]] = None,
-        retry_count: int = 0,
         **kwargs: Any,
     ) -> Any:
         """Make an authenticated request to the Drivee API.
@@ -96,14 +119,14 @@ class DriveeClient:
             method: HTTP method (GET, POST, etc.)
             endpoint: API endpoint
             json: JSON body for POST requests
-            retry_count: Number of retry attempts (internal use)
             **kwargs: Additional arguments for aiohttp request
             
         Returns:
             The API response data
             
         Raises:
-            Exception: If the request fails after max retries
+            AuthenticationError: If authentication fails after retries
+            Exception: For other API errors
         """
         if not self._session:
             self._session = aiohttp.ClientSession()
@@ -136,21 +159,11 @@ class DriveeClient:
             **kwargs
         ) as response:
             if response.status == 401:
-                if retry_count >= 3:
-                    raise Exception("Max retry attempts reached for authentication")
-                # Token expired, authenticate and retry
-                await self.authenticate()
-                return await self._make_request(
-                    method, 
-                    endpoint, 
-                    json=json, 
-                    retry_count=retry_count + 1,
-                    **kwargs
-                )
+                # Token expired, raise AuthenticationError to trigger retry
+                raise AuthenticationError("Authentication failed")
             
             if response.status not in (200, 202):
-                response_data = await response.json()
-                raise Exception(f"API request failed: {response_data}")
+                raise Exception(f"API request failed: {await response.text()}")
             
             return await response.json()
 
@@ -194,23 +207,23 @@ class DriveeClient:
         data = await self._make_request("GET", "app/profile/session_history", params=params)
         return ChargingHistory.from_dict(data)
 
-    async def end_charging(self, session_id: str) -> dict[str, Any]:
+    async def end_charging(self) -> EndChargingResponse:
         """End charging for a specific session.
         
-        Args:
-            session_id: The ID of the charging session to end
-            
         Returns:
             The API response containing the session details
         """
-        data = await self._make_request("POST", f"app/session/{session_id}/end")
-        return data
+        data = await self._make_request("POST", f"app/session/{self.session_id}/end")
+        self.session_id = None
+        return EndChargingResponse.from_dict(data)
 
-    async def start_charging(self, evse_id: str) -> StartChargingResponse:
+    async def start_charging(self) -> StartChargingResponse:
         """Start charging on a specific EVSE."""
         data = await self._make_request(
             "POST", 
             "app/session/start",
-            json={"evseId": evse_id}
+            json={"evseId": self.evse_id}
         )
-        return StartChargingResponse.from_dict(data) 
+        startChargingResponse =StartChargingResponse.from_dict(data) 
+        self.session_id = startChargingResponse.session_id
+        return startChargingResponse
