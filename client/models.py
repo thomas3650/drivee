@@ -294,16 +294,19 @@ class ChargePoint:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChargePoint':
         """Create a ChargePoint instance from a dictionary."""
-        evses = [EVSE.from_dict(e) for e in data['evses']]
-        if len(evses) != 1:
-            raise ValueError(f"Expected exactly one EVSE, but found {len(evses)}")
+        # The API returns evses as a list, but we expect exactly one
+        evses = data.get('evses', [])
+        if not evses:
+            raise ValueError("No EVSEs found in charge point data")
+            
+        evse = EVSE.from_dict(evses[0])
             
         return cls(
             name=data['name'],
             status=data['status'],
-            allowed_max_power_kw=data['allowed_max_power_kw'],
-            scheduling_intervals=SchedulingIntervals.from_dict(data['scheduling_intervals']),
-            evse=evses[0]
+            allowed_max_power_kw=float(data.get('allowed_max_power_kw', data.get('allowedMaxPowerKw', 0))),
+            scheduling_intervals=SchedulingIntervals.from_dict(data.get('scheduling_intervals', {})),
+            evse=evse
         )
 
 @dataclass
