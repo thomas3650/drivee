@@ -1,0 +1,21 @@
+2025-04-02 22:09:29.277 ERROR (MainThread) [custom_components.drivee.switch] Failed to start charging: 'lastPeriod'
+2025-04-02 22:09:37.333 ERROR (MainThread) [custom_components.drivee] Unexpected error fetching drivee_charge_points data
+Traceback (most recent call last):
+  File "/workspaces/core/homeassistant/helpers/update_coordinator.py", line 373, in _async_refresh
+    self.data = await self._async_update_data()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/core/homeassistant/helpers/update_coordinator.py", line 274, in _async_update_data
+    return await self.update_method()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/core/config/custom_components/drivee/client/drivee_client.py", line 189, in get_charge_point
+    return ChargePoint.from_dict(data["data"][0])
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/workspaces/core/config/custom_components/drivee/client/models.py", line 302, in from_dict
+    evse = EVSE.from_dict(evses[0])
+  File "/workspaces/core/config/custom_components/drivee/client/models.py", line 282, in from_dict
+    session=ChargingSession.from_dict(data['session']) if data.get('session') else None
+            ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/workspaces/core/config/custom_components/drivee/client/models.py", line 230, in from_dict
+    last_period=ChargingPeriod.from_dict(data['lastPeriod']),
+                                         ~~~~^^^^^^^^^^^^^^
+KeyError: 'lastPeriod'

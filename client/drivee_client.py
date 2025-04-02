@@ -148,6 +148,8 @@ class DriveeClient:
             await self.authenticate()
 
         url = f"{self._base_url}/{endpoint.lstrip('/')}"
+        _LOGGER.info(f"URL: {url}")
+        _LOGGER.info(f"body: {json}")
         headers = {
             "Authorization": f"Bearer {self._access_token}",
             "accept": "application/json, text/plain, */*",
@@ -168,6 +170,8 @@ class DriveeClient:
             json=json,
             **kwargs
         ) as response:
+            response_data = await response.json()
+            _LOGGER.info(f"Response data: {response_data}")
             if response.status == 401:
                 # Token expired, raise AuthenticationError to trigger retry
                 raise AuthenticationError("Authentication failed")
