@@ -160,7 +160,7 @@ async def main():
         async with DriveeClient(username, password) as client:
             # Display charge points status
             chartingPoint = await client.get_charge_point()
-            await client.start_charging(chartingPoint.evse.id)
+            #await client.start_charging(chartingPoint.evse.id)
             await display_charge_points(client)
             
             await display_charging_history(client, 30)

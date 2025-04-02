@@ -87,9 +87,24 @@ class DriveeClient:
         method: str,
         endpoint: str,
         json: Optional[Dict[str, Any]] = None,
+        retry_count: int = 0,
         **kwargs: Any,
     ) -> Any:
-        """Make an authenticated request to the Drivee API."""
+        """Make an authenticated request to the Drivee API.
+        
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint
+            json: JSON body for POST requests
+            retry_count: Number of retry attempts (internal use)
+            **kwargs: Additional arguments for aiohttp request
+            
+        Returns:
+            The API response data
+            
+        Raises:
+            Exception: If the request fails after max retries
+        """
         if not self._session:
             self._session = aiohttp.ClientSession()
 
@@ -121,22 +136,21 @@ class DriveeClient:
             **kwargs
         ) as response:
             if response.status == 401:
-                # Token expired, try to refresh
+                if retry_count >= 3:
+                    raise Exception("Max retry attempts reached for authentication")
+                # Token expired, authenticate and retry
                 await self.authenticate()
-                headers["Authorization"] = f"Bearer {self._access_token}"
-                async with self._session.request(
+                return await self._make_request(
                     method, 
-                    url, 
-                    headers=headers, 
-                    params=params,
-                    json=json,
+                    endpoint, 
+                    json=json, 
+                    retry_count=retry_count + 1,
                     **kwargs
-                ) as retry_response:
-                    if retry_response.status != 200:
-                        raise Exception(f"API request failed: {await retry_response.text()}")
-                    return await retry_response.json()
-            elif response.status != 200:
-                raise Exception(f"API request failed: {await response.text()}")
+                )
+            
+            if response.status not in (200, 202):
+                response_data = await response.json()
+                raise Exception(f"API request failed: {response_data}")
             
             return await response.json()
 
