@@ -29,8 +29,8 @@ class DriveeChargePointNameSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Charging Point Name"
-        self._attr_unique_id = "drivee_charge_point"
+        self._attr_name = "Name"
+        self._attr_unique_id = "drivee_name"
         self._attr_native_value = None
         self._attr_icon = "mdi:ev-station"
 
@@ -48,8 +48,8 @@ class DriveeEVSEStatusSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "EVSE Status"
-        self._attr_unique_id = "drivee_evse_status"
+        self._attr_name = "Status"
+        self._attr_unique_id = "drivee_status"
         self._attr_native_value = None
         self._attr_icon = "mdi:ev-station"
 

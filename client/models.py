@@ -174,7 +174,7 @@ class ChargingSession:
     is_remote_stop_enabled: bool
     is_balance_payment_pending: bool
     charging_periods: List[ChargingPeriod]
-    last_period: ChargingPeriod
+    last_period: Optional[ChargingPeriod]
     idle_fee_eligible: bool
     tax_name: Optional[str]
     smart_charging_schedule: Optional[List[Dict[str, Any]]]
@@ -227,7 +227,7 @@ class ChargingSession:
             is_remote_stop_enabled=data['isRemoteStopEnabled'],
             is_balance_payment_pending=data['isBalancePaymentPending'],
             charging_periods=[ChargingPeriod.from_dict(p) for p in data.get('chargingPeriods', [])],
-            last_period=ChargingPeriod.from_dict(data['lastPeriod']),
+            last_period=ChargingPeriod.from_dict(data['lastPeriod']) if data.get('lastPeriod') else None,
             idle_fee_eligible=data['idleFeeEligible'],
             tax_name=data.get('taxName'),
             smart_charging_schedule=data.get('smartChargingSchedule'),

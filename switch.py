@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
 
-from .const import DOMAIN, STATE_CHARGING
+from .const import DOMAIN, STATE_CHARGING, STATE_PENDING
 from .coordinator import DriveeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,28 +24,21 @@ async def async_setup_entry(
 ) -> None:
     """Set up Drivee charging switch based on a config entry."""
     coordinator: DriveeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([DriveeChargingSwitch(coordinator, entry)])
+    async_add_entities([DriveeChargingSwitch(coordinator)])
 
 
 class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
     """Representation of a Drivee charging switch."""
 
-    _attr_has_entity_name = True
-    _attr_name = "Charging"
-    _attr_entity_category = EntityCategory.CONFIG
-
     def __init__(
-        self, coordinator: DriveeDataUpdateCoordinator, entry: ConfigEntry
+        self, coordinator: DriveeDataUpdateCoordinator
     ) -> None:
         """Initialize the switch."""
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_charging"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "Drivee Charger",
-            "manufacturer": "Drivee",
-            "model": "EV Charger",
-        }
+        self._attr_name = "Charging"
+        self._attr_unique_id = "drivee_charging"
+        self._attr_icon = "mdi:ev-station"
+
 
     @property
     def is_on(self) -> bool:
@@ -54,7 +47,7 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
             return False
         
         if hasattr(self.coordinator.data.evse, "status"):
-            return self.coordinator.data.evse.status == STATE_CHARGING
+            return self.coordinator.data.evse.status == STATE_CHARGING or self.coordinator.data.evse.status == STATE_PENDING
         
         return False
 

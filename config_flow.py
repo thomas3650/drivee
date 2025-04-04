@@ -45,7 +45,7 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
                     app_version="2.126.0"
                 ) as client:
                     await client.authenticate()
-                
+                    await client.refresh_state()
                 return self.async_create_entry(
                     title=user_input[CONF_USERNAME],
                     data=user_input,

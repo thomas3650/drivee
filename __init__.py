@@ -17,6 +17,10 @@ from .coordinator import DriveeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# Set up logging
+logging.getLogger("custom_components.drivee").setLevel(logging.DEBUG)
+logging.getLogger("custom_components.drivee.client").setLevel(logging.DEBUG)
+
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -40,8 +44,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass,
         _LOGGER,
         name="drivee_charge_points",
-        update_method=client.get_charge_point,
-        update_interval=timedelta(minutes=1),
+        update_method=client.refresh_state,
+        update_interval=timedelta(seconds=30),
         client=client,
     )
 

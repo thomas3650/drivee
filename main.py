@@ -159,6 +159,7 @@ async def main():
         
         async with DriveeClient(username, password) as client:
             await client.authenticate()
+            await client.refresh_state()
             # Display charge points status
             #await client.end_charging()
             #await client.start_charging()

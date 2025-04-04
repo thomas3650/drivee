@@ -50,11 +50,13 @@ class DriveeClient:
         self._base_url = "https://drivee.eu.charge.ampeco.tech/api/v1"
         self.evse_id: Optional[str] = None
         self.session_id: Optional[str] = None
+        _LOGGER.debug("DriveeClient initialized with username: %s, device_id: %s", username, device_id)
 
     async def __aenter__(self) -> "DriveeClient":
         """Async context manager entry."""
         if not self._session:
             self._session = aiohttp.ClientSession()
+            _LOGGER.debug("Created new aiohttp ClientSession")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -62,12 +64,15 @@ class DriveeClient:
         if self._session:
             await self._session.close()
             self._session = None
+            _LOGGER.debug("Closed aiohttp ClientSession")
 
     
     async def authenticate(self) -> None:
         """Authenticate with the Drivee API."""
+        _LOGGER.info("Authenticating with Drivee API")
         if not self._session:
             self._session = aiohttp.ClientSession()
+            _LOGGER.debug("Created new aiohttp ClientSession for authentication")
 
         url = f"{self._base_url}/app/oauth/token"
         headers = {
@@ -83,32 +88,49 @@ class DriveeClient:
         }
         data = {
             "username": self.username,
-            "password": self.password,
+            "password": self.password,  # Masked for security in logs
             "grant_type": "password",
             "client_id": "1",
             "client_secret": "IRPoTPxre3pEvWU3TQKVIltc0aVnIuzLJlfVp6Gh"
         }
+        _LOGGER.debug("Authentication request URL: %s", url)
 
-        async with self._session.post(url, headers=headers, json=data) as response:
-            if response.status != 200:
-                raise Exception(f"Authentication failed: {await response.text()}")
+        try:
+            async with self._session.post(url, headers=headers, json={**data, "password": self.password}) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    _LOGGER.error("Authentication failed with status %d: %s", response.status, error_text)
+                    raise Exception(f"Authentication failed: {error_text}")
+                
+                result = await response.json()
+                self._access_token = result["access_token"]
+                self._token_expires_at = datetime.now() + timedelta(seconds=result["expires_in"])
+                _LOGGER.info("Authentication successful, token expires at %s", self._token_expires_at)
+        except Exception as e:
+            _LOGGER.exception("Error during authentication: %s", str(e))
+            raise
+                
+
+    async def refresh_state(self) -> ChargePoint:
+        """Refresh the client state with latest charge point data."""
+        _LOGGER.info("Refreshing Drivee client state")
+        try:
+            charge_point = await self.get_charge_point()
+
+            _LOGGER.debug("Retrieved charge point: %s", charge_point.name)
+            self.evse_id = charge_point.evse.id
+            _LOGGER.debug("Set EVSE ID to: %s", self.evse_id)
             
-            result = await response.json()
-            self._access_token = result["access_token"]
-            self._token_expires_at = datetime.now() + timedelta(seconds=result["expires_in"])
-        
-        # Get charge point and set EVSE ID
-        charge_point = await self.get_charge_point()
-        if not charge_point:
-            raise Exception("No charge point found")
-            
-        self.evse_id = charge_point.evse.id
-        
-        # Only set session_id if there is an active session
-        if charge_point.evse.session:
-            self.session_id = charge_point.evse.session.id
-        else:
-            self.session_id = None
+            if charge_point.evse.session:
+                self.session_id = charge_point.evse.session.id
+                _LOGGER.debug("Set session ID to: %s", self.session_id)
+            else:
+                self.session_id = None
+                _LOGGER.debug("No active session found, set session ID to None")
+            return charge_point
+        except Exception as e:
+            _LOGGER.exception("Error refreshing state: %s", str(e))
+            raise
 
     @retry(
         stop=stop_after_attempt(3),
@@ -138,18 +160,22 @@ class DriveeClient:
             AuthenticationError: If authentication fails after retries
             Exception: For other API errors
         """
+        _LOGGER.debug("Making %s request to endpoint: %s", method, endpoint)
+        if json:
+            _LOGGER.debug("Request payload: %s", json)
+            
         if not self._session:
             self._session = aiohttp.ClientSession()
+            _LOGGER.debug("Created new aiohttp ClientSession for request")
 
         # Ensure we have a valid token
         if not self._access_token or (
             self._token_expires_at and datetime.now() >= self._token_expires_at
         ):
+            _LOGGER.info("Token expired or missing, re-authenticating")
             await self.authenticate()
 
         url = f"{self._base_url}/{endpoint.lstrip('/')}"
-        _LOGGER.info(f"URL: {url}")
-        _LOGGER.info(f"body: {json}")
         headers = {
             "Authorization": f"Bearer {self._access_token}",
             "accept": "application/json, text/plain, */*",
@@ -162,35 +188,60 @@ class DriveeClient:
             "Accept-Encoding": "gzip",
             "User-Agent": "okhttp/4.9.2"
         }
+        _LOGGER.debug("endpoint: '%s'", url)
+        try:
+            async with self._session.request(
+                method, 
+                url, 
+                headers=headers, 
+                json=json,
+                **kwargs
+            ) as response:
+                _LOGGER.debug("Response status: %d", response.status)
+                
+                if response.status == 401:
+                    _LOGGER.warning("Authentication failed (401), will retry with fresh token")
+                    # Token expired, raise AuthenticationError to trigger retry
+                    raise AuthenticationError("Authentication failed")
+                
+                if response.status not in (200, 202):
+                    error_text = await response.text()
+                    _LOGGER.error("API request failed with status %d: %s", response.status, error_text)
+                    raise Exception(f"API request failed: {error_text}")
+                
+                response_data = await response.json()
+                _LOGGER.debug("Response data: %s", response_data)
+                return response_data
+        except AuthenticationError:
+            # Let this propagate for retry
+            raise
+        except Exception as e:
+            _LOGGER.exception("Error making request: %s", str(e))
+            raise
 
-        async with self._session.request(
-            method, 
-            url, 
-            headers=headers, 
-            json=json,
-            **kwargs
-        ) as response:
-            response_data = await response.json()
-            _LOGGER.info(f"Response data: {response_data}")
-            if response.status == 401:
-                # Token expired, raise AuthenticationError to trigger retry
-                raise AuthenticationError("Authentication failed")
-            
-            if response.status not in (200, 202):
-                raise Exception(f"API request failed: {await response.text()}")
-            
-            return await response.json()
-
-    async def get_charge_point(self) -> Optional[ChargePoint]:
+    async def get_charge_point(self) -> ChargePoint:
         """Get the first charge point.
         
         Returns:
             The first charge point or None if no charge points are available.
         """
-        data = await self._make_request("GET", "app/personal/charge-points")
-        if not data or not data.get("data"):
-            return None
-        return ChargePoint.from_dict(data["data"][0])
+        _LOGGER.info("Fetching charge point")
+        try:
+            data = await self._make_request("GET", "app/personal/charge-points")
+            
+            if not data.get("data") or not data["data"]:
+                _LOGGER.warning("No charge points found in API response")
+                return None
+                
+            _LOGGER.debug("Retrieved %d charge points, using first one", len(data["data"]))
+            charge_point = ChargePoint.from_dict(data["data"][0])
+            _LOGGER.info("Charge point status: %s, EVSE status: %s", 
+                         charge_point.status, 
+                         getattr(charge_point.evse, "status", "unknown"))
+            return charge_point
+        except Exception as e:
+            _LOGGER.exception("Error fetching charge point: %s", str(e))
+            raise
 
     async def get_charging_history(
         self,
@@ -203,23 +254,31 @@ class DriveeClient:
             start_date: Start date as datetime object or string in YYYY-MM-DD format
             end_date: End date as datetime object or string in YYYY-MM-DD format
         """
+        _LOGGER.info("Fetching charging history from %s to %s", start_date, end_date)
         if not start_date:
             start_date = datetime.now() - timedelta(days=30)
         if not end_date:
             end_date = datetime.now()
 
-        # Convert string dates to datetime objects if needed
-        if isinstance(start_date, str):
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        if isinstance(end_date, str):
-            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        # Convert datetime objects to strings if needed
+        if isinstance(start_date, datetime):
+            start_date = start_date.strftime("%Y-%m-%d")
+        if isinstance(end_date, datetime):
+            end_date = end_date.strftime("%Y-%m-%d")
 
-        params = {
-            "start_date": start_date.strftime("%Y-%m-%d"),
-            "end_date": end_date.strftime("%Y-%m-%d"),
-        }
-        data = await self._make_request("GET", "app/profile/session_history", params=params)
-        return ChargingHistory.from_dict(data)
+        _LOGGER.debug("Formatted date range: %s to %s", start_date, end_date)
+        try:
+            params = {
+            "start_date": start_date,
+            "end_date": end_date
+            }
+            data = await self._make_request("GET", "app/profile/session_history", params=params)
+            history = ChargingHistory.from_dict(data)
+            _LOGGER.debug("Retrieved %d charging history entries", len(history.session_history))
+            return history
+        except Exception as e:
+            _LOGGER.exception("Error fetching charging history: %s", str(e))
+            raise
 
     async def end_charging(self) -> EndChargingResponse:
         """End charging for a specific session.
@@ -227,17 +286,44 @@ class DriveeClient:
         Returns:
             The API response containing the session details
         """
-        data = await self._make_request("POST", f"app/session/{self.session_id}/end")
-        self.session_id = None
-        return EndChargingResponse.from_dict(data)
+        _LOGGER.info("Ending charging session: %s", self.session_id)
+        if not self.session_id:
+            error_msg = "No active session ID to end charging"
+            _LOGGER.error(error_msg)
+            raise ValueError(error_msg)
+            
+        try:
+            data = await self._make_request("POST", f"app/session/{self.session_id}/end")
+            _LOGGER.info("Successfully ended charging session")
+            self.session_id = None
+            response = EndChargingResponse.from_dict(data)
+            _LOGGER.debug("End charging response: Session ID %s, status %s", 
+                         response.session.id, response.session.status)
+            return response
+        except Exception as e:
+            _LOGGER.exception("Error ending charging: %s", str(e))
+            raise
 
     async def start_charging(self) -> StartChargingResponse:
         """Start charging on a specific EVSE."""
-        data = await self._make_request(
-            "POST", 
-            "app/session/start",
-            json={"evseId": self.evse_id}
-        )
-        response = StartChargingResponse.from_dict(data)
-        self.session_id = response.session.id
-        return response
+        _LOGGER.info("Starting charging on EVSE: %s", self.evse_id)
+        if not self.evse_id:
+            error_msg = "No EVSE ID available to start charging"
+            _LOGGER.error(error_msg)
+            raise ValueError(error_msg)
+            
+        try:
+            data = await self._make_request(
+                "POST", 
+                "app/session/start",
+                json={"evseId": self.evse_id}
+            )
+            response = StartChargingResponse.from_dict(data)
+            self.session_id = response.session.id
+            _LOGGER.info("Successfully started charging, new session ID: %s", self.session_id)
+            _LOGGER.debug("Start charging response: Session ID %s, status %s", 
+                         response.session.id, response.session.status)
+            return response
+        except Exception as e:
+            _LOGGER.exception("Error starting charging: %s", str(e))
+            raise
