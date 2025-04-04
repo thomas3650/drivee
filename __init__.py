@@ -44,7 +44,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass,
         _LOGGER,
         name="drivee_charge_points",
-        update_method=client.refresh_state,
         update_interval=timedelta(seconds=30),
         client=client,
     )

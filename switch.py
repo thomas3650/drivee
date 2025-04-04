@@ -43,11 +43,12 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return true if charging is active."""
-        if not self.coordinator.data:
+        if not self.coordinator.data or not self.coordinator.data.charge_point:
             return False
         
-        if hasattr(self.coordinator.data.evse, "status"):
-            return self.coordinator.data.evse.status == STATE_CHARGING or self.coordinator.data.evse.status == STATE_PENDING
+        if hasattr(self.coordinator.data.charge_point.evse, "status"):
+            return (self.coordinator.data.charge_point.evse.status == STATE_CHARGING or 
+                    self.coordinator.data.charge_point.evse.status == STATE_PENDING)
         
         return False
 

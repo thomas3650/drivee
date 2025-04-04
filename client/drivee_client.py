@@ -274,7 +274,7 @@ class DriveeClient:
             }
             data = await self._make_request("GET", "app/profile/session_history", params=params)
             history = ChargingHistory.from_dict(data)
-            _LOGGER.debug("Retrieved %d charging history entries", len(history.session_history))
+            _LOGGER.debug("Retrieved %d charging history entries", len(history.sessions))
             return history
         except Exception as e:
             _LOGGER.exception("Error fetching charging history: %s", str(e))

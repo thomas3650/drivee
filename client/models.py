@@ -354,18 +354,18 @@ class ChargingHistoryEntry:
 @dataclass
 class ChargingHistory:
     """Model for charging history data."""
-    session_history: List[ChargingHistoryEntry]
+    sessions: List[ChargingHistoryEntry]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChargingHistory':
         """Create a ChargingHistory instance from a dictionary."""
         return cls(
-            session_history=[ChargingHistoryEntry.from_dict(entry) for entry in data['session_history']]
+            sessions=[ChargingHistoryEntry.from_dict(entry) for entry in data['session_history']]
         )
 
     def get_session(self, session_id: str) -> Optional[ChargingHistoryEntry]:
         """Get a specific charging session by ID."""
-        for entry in self.session_history:
-            if entry.session.id == session_id:
-                return entry
+        for session in self.sessions:
+            if session.id == session_id:
+                return session
         return None 

@@ -77,7 +77,7 @@ async def display_charging_history(client: DriveeClient, days: int = 30):
     logger.info("\nCharging History Summary:")
     logger.info(f"Period: {start_date} to {end_date}")
     
-    for entry in history.session_history:
+    for entry in history.sessions:
         session = entry.session
         total_energy += session.energy
         total_cost += float(session.amount)
