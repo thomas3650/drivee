@@ -210,6 +210,7 @@ class DriveeClient:
                     raise Exception(f"API request failed: {error_text}")
                 
                 response_data = await response.json()
+                
                 _LOGGER.debug("Response data: %s", response_data)
                 return response_data
         except AuthenticationError:

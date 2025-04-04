@@ -1,6 +1,7 @@
 """Main script for Drivee client."""
 import asyncio
 import os
+import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import logging
@@ -119,6 +120,7 @@ async def display_charge_points(client: DriveeClient):
     """
     logger.info("Checking charge point status...")
     charge_point = await client.get_charge_point()
+
     
     if not charge_point:
         logger.info("No charge point found")

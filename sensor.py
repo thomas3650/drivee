@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .coordinator import DriveeDataUpdateCoordinator
 from .const import DOMAIN
+from .client.models import ChargingSession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -103,7 +104,9 @@ class DriveeLastChargingSessionSensor(CoordinatorEntity, SensorEntity):
         started_at = session.started_at.isoformat() if session.started_at else None
         stopped_at = session.stopped_at.isoformat() if session.stopped_at else None
         
+        # Basic session information
         attributes = {
+            "session_id": session.id,
             "started_at": started_at,
             "stopped_at": stopped_at,
             "duration_minutes": round(session.duration / 60, 1),
@@ -111,5 +114,38 @@ class DriveeLastChargingSessionSensor(CoordinatorEntity, SensorEntity):
             "amount": float(session.amount),
             "currency": session.currency.code,
             "status": session.status,
+            "charging_state": session.charging_state,
+            "power_w": session.power,
+            "power_kw": round(session.power / 1000, 2),
+            "power_avg": session.power_avg,
         }
+        
+        # Format data points for graphing
+        data_points = []
+        
+        # Add charging periods as data points for time-series charts
+        if hasattr(session, "charging_periods") and session.charging_periods:
+            for period in session.charging_periods:
+                # Ensure we have a timestamp
+                if not period.started_at:
+                    continue
+                    
+                # Create a data point for each period
+                data_point = {
+                    "timestamp": period.started_at.isoformat(),
+                    "state": period.state,
+                    "duration_seconds": period.duration_in_seconds,
+                    "amount": float(period.amount)
+                }
+                
+                
+                data_points.append(data_point)
+            
+            # Sort data points by timestamp
+            data_points.sort(key=lambda x: x["timestamp"])
+            _LOGGER.debug("data_points count: %d", len(data_points))
+            # Add data points array formatted for graphing
+            attributes["data_points"] = data_points
+        
         return attributes 
+
