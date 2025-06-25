@@ -54,17 +54,18 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator):
     async def _update_data(self) -> DriveeData:
         """Fetch data from API."""
         try:
+            
             # Get charge point data
-            charge_point = await self.client.get_charge_point()
+            charge_point = await self.client.refresh_state()
             if charge_point:
-                _LOGGER.debug("Retrieved charge point: %s", charge_point.name)
+                _LOGGER.info("Retrieved charge point: %s", charge_point.name)
                 self.data.charge_point = charge_point
             
             # Get charging history
             try:
                 history = await self.client.get_charging_history()
                 if history and history.sessions:
-                    _LOGGER.debug("Retrieved %d charging history entries", len(history.sessions))
+                    _LOGGER.info("Retrieved %d charging history entries", len(history.sessions))
                     self.data.charging_history = history
             except Exception as e:
                 _LOGGER.exception("Error fetching charging history: %s", str(e))
