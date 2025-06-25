@@ -117,16 +117,16 @@ class DriveeClient:
         try:
             charge_point = await self.get_charge_point()
 
-            _LOGGER.debug("Retrieved charge point: %s", charge_point.name)
+            _LOGGER.info("Retrieved charge point: %s", charge_point.name)
             self.evse_id = charge_point.evse.id
-            _LOGGER.debug("Set EVSE ID to: %s", self.evse_id)
+            _LOGGER.info("Set EVSE ID to: %s", self.evse_id)
             
             if charge_point.evse.session:
                 self.session_id = charge_point.evse.session.id
-                _LOGGER.debug("Set session ID to: %s", self.session_id)
+                _LOGGER.info("Set session ID to: %s", self.session_id)
             else:
                 self.session_id = None
-                _LOGGER.debug("No active session found, set session ID to None")
+                _LOGGER.info("No active session found, set session ID to None")
             return charge_point
         except Exception as e:
             _LOGGER.exception("Error refreshing state: %s", str(e))
@@ -160,13 +160,13 @@ class DriveeClient:
             AuthenticationError: If authentication fails after retries
             Exception: For other API errors
         """
-        _LOGGER.debug("Making %s request to endpoint: %s", method, endpoint)
+        _LOGGER.info("Making %s request to endpoint: %s", method, endpoint)
         if json:
             _LOGGER.debug("Request payload: %s", json)
             
         if not self._session:
             self._session = aiohttp.ClientSession()
-            _LOGGER.debug("Created new aiohttp ClientSession for request")
+            _LOGGER.info("Created new aiohttp ClientSession for request")
 
         # Ensure we have a valid token
         if not self._access_token or (
@@ -188,7 +188,7 @@ class DriveeClient:
             "Accept-Encoding": "gzip",
             "User-Agent": "okhttp/4.9.2"
         }
-        _LOGGER.debug("endpoint: '%s'", url)
+        _LOGGER.info("endpoint: '%s'", url)
         try:
             async with self._session.request(
                 method, 
@@ -197,7 +197,7 @@ class DriveeClient:
                 json=json,
                 **kwargs
             ) as response:
-                _LOGGER.debug("Response status: %d", response.status)
+                _LOGGER.info("Response status: %d", response.status)
                 
                 if response.status == 401:
                     _LOGGER.warning("Authentication failed (401), will retry with fresh token")
@@ -234,7 +234,7 @@ class DriveeClient:
                 _LOGGER.warning("No charge points found in API response")
                 return None
                 
-            _LOGGER.debug("Retrieved %d charge points, using first one", len(data["data"]))
+            _LOGGER.info("Retrieved %d charge points, using first one", len(data["data"]))
             charge_point = ChargePoint.from_dict(data["data"][0])
             _LOGGER.info("Charge point status: %s, EVSE status: %s", 
                          charge_point.status, 
@@ -298,7 +298,7 @@ class DriveeClient:
             _LOGGER.info("Successfully ended charging session")
             self.session_id = None
             response = EndChargingResponse.from_dict(data)
-            _LOGGER.debug("End charging response: Session ID %s, status %s", 
+            _LOGGER.info("End charging response: Session ID %s, status %s", 
                          response.session.id, response.session.status)
             return response
         except Exception as e:
@@ -322,7 +322,7 @@ class DriveeClient:
             response = StartChargingResponse.from_dict(data)
             self.session_id = response.session.id
             _LOGGER.info("Successfully started charging, new session ID: %s", self.session_id)
-            _LOGGER.debug("Start charging response: Session ID %s, status %s", 
+            _LOGGER.info("Start charging response: Session ID %s, status %s", 
                          response.session.id, response.session.status)
             return response
         except Exception as e:

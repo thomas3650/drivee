@@ -137,6 +137,7 @@ async def display_charge_points(client: DriveeClient):
     logger.info(f"\nEVSE Status: {evse.status}")
     logger.info(f"Max Power: {evse.max_power/1000:.1f}kW")
     logger.info(f"Current Type: {evse.current_type}")
+    logger.info(f"EVSE ID: {evse.id}")
     
     # Get the single connector
     if evse.connectors:
@@ -167,7 +168,7 @@ async def main():
             #await client.start_charging()
             await display_charge_points(client)
             
-            await display_charging_history(client, 30)
+            #await display_charging_history(client, 30)
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         raise
