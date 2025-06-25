@@ -35,9 +35,9 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
     ) -> None:
         """Initialize the switch."""
         super().__init__(coordinator)
-        self._attr_name = "Charging"
+        self._attr_name = "drivee_charging"
         self._attr_unique_id = "drivee_charging"
-        self._attr_icon = "mdi:ev-station"
+        self._attr_icon = "mdi:power-standby"
 
 
     @property
