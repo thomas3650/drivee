@@ -37,7 +37,7 @@ class DriveeChargePointNameSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Name"
+        self._attr_name = "drivee_name"
         self._attr_unique_id = "drivee_name"
         self._attr_native_value = None
         self._attr_icon = "mdi:ev-station"
@@ -56,7 +56,7 @@ class DriveeEVSEStatusSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Status"
+        self._attr_name = "drivee_status"
         self._attr_unique_id = "drivee_status"
         self._attr_native_value = None
         self._attr_icon = "mdi:ev-station"
@@ -68,6 +68,25 @@ class DriveeEVSEStatusSensor(CoordinatorEntity, SensorEntity):
             return "unknown"
             
         return self.coordinator.data.charge_point.evse.status
+    
+class DriveeSessionPowerSensor(CoordinatorEntity, SensorEntity):
+    """Drivee Power sensor."""
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_name = "drivee_power"
+        self._attr_unique_id = "drivee_power"
+        self._attr_native_value = None
+        self._attr_icon = "mdi:ev-station"
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the state of the sensor."""
+        if not self.coordinator.data or not self.coordinator.data.currentSession:
+            return "No charging session active"
+        session = self.coordinator.data.charge_point.evse.session
+        return f"Power: {session.power/1000:.1f}kW"
 
 class DriveeLastChargingSessionSensor(CoordinatorEntity, SensorEntity):
     """Sensor for displaying the last charging session information."""
@@ -75,7 +94,7 @@ class DriveeLastChargingSessionSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "Last Charging Session"
+        self._attr_name = "drivee_Last Charging Session"
         self._attr_unique_id = "drivee_last_session"
         self._attr_native_value = None
         self._attr_icon = "mdi:history"

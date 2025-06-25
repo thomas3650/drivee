@@ -118,6 +118,8 @@ class DriveeClient:
             charge_point = await self.get_charge_point()
 
             _LOGGER.info("Retrieved charge point: %s", charge_point.name)
+            if not charge_point.evse:
+                raise Exception("No EVSE found")
             self.evse_id = charge_point.evse.id
             _LOGGER.info("Set EVSE ID to: %s", self.evse_id)
             

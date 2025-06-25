@@ -60,6 +60,7 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator):
             if charge_point:
                 _LOGGER.info("Retrieved charge point: %s", charge_point.name)
                 self.data.charge_point = charge_point
+                self.data.currentSession = charge_point.evse.session
             
             # Get charging history
             try:
