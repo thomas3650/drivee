@@ -101,7 +101,7 @@ class DriveeSessionDurationSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_value = None
         self._attr_icon = "mdi:clock-time-five-outline"
 
-    def format_duration(seconds: int) -> str:
+    def _format_duration(seconds: int) -> str:
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
         return f"{hours}h {minutes}m"
@@ -112,7 +112,7 @@ class DriveeSessionDurationSensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.data or not self.coordinator.data.currentSession:
             return "No charging session active"
         session = self.coordinator.data.charge_point.evse.session.duration
-        return f"{self.format_duration(session.duration)}"
+        return self._format_duration(session.duration)
 
 class DriveeSessionEnergySensor(CoordinatorEntity, SensorEntity):
 
