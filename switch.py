@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
 )
 
-from .const import DOMAIN, STATE_CHARGING, STATE_PENDING
+from .const import DOMAIN, STATE_CHARGING, STATE_PENDING, STATE_SUSPENDED
 from .coordinator import DriveeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,14 +48,15 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
         
         if hasattr(self.coordinator.data.charge_point.evse, "status"):
             return (self.coordinator.data.charge_point.evse.status == STATE_CHARGING or 
-                    self.coordinator.data.charge_point.evse.status == STATE_PENDING)
+                    self.coordinator.data.charge_point.evse.status == STATE_PENDING or
+                    self.coordinator.data.charge_point.evse.status == STATE_SUSPENDED)
         
         return False
 
     @property
-    def icon(self) -> str:
+    def icon(self):
         """Return the icon to use in the frontend."""
-        return "mdi:ev-station" if self.is_on else "mdi:ev-station-outline"
+        return "mdi:ev-station" #if self.is_on else "mdi:ev-station-outline"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""

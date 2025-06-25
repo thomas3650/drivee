@@ -20,4 +20,5 @@ SCAN_INTERVAL = timedelta(seconds=30)
 STATE_CONNECTED = "connected"
 STATE_CHARGING = "charging"
 STATE_PENDING = "pending"
+STATE_SUSPENDED = "suspended"
 STATE_DISCONNECTED = "disconnected"
