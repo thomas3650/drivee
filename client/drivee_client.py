@@ -162,7 +162,7 @@ class DriveeClient:
         """
         _LOGGER.info("Making %s request to endpoint: %s", method, endpoint)
         if json:
-            _LOGGER.debug("Request payload: %s", json)
+            _LOGGER.info("Request payload: %s", json)
             
         if not self._session:
             self._session = aiohttp.ClientSession()
@@ -211,7 +211,7 @@ class DriveeClient:
                 
                 response_data = await response.json()
                 
-                _LOGGER.debug("Response data: %s", response_data)
+                #_LOGGER.debug("Response data: %s", response_data)
                 return response_data
         except AuthenticationError:
             # Let this propagate for retry
