@@ -89,7 +89,7 @@ class DriveeSessionPowerSensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.data or not self.coordinator.data.currentSession:
             return "No charging session active"
         session = self.coordinator.data.charge_point.evse.session
-        return f"Power: {session.power/1000:.1f}kW"
+        return f"{session.power/1000:.1f}kW"
     
 class DriveeSessionDurationSensor(CoordinatorEntity, SensorEntity):
 
@@ -101,12 +101,18 @@ class DriveeSessionDurationSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_value = None
         self._attr_icon = "mdi:clock-time-five-outline"
 
+    def format_duration(seconds: int) -> str:
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        return f"{hours}h {minutes}m"
+
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         if not self.coordinator.data or not self.coordinator.data.currentSession:
             return "No charging session active"
-        return self.coordinator.data.charge_point.evse.session.duration
+        session = self.coordinator.data.charge_point.evse.session.duration
+        return f"{self.format_duration(session.duration)}"
 
 class DriveeSessionEnergySensor(CoordinatorEntity, SensorEntity):
 
@@ -142,7 +148,7 @@ class DriveeSessionCostSensor(CoordinatorEntity, SensorEntity):
         if not self.coordinator.data or not self.coordinator.data.currentSession:
             return "No charging session active"
         session = self.coordinator.data.charge_point.evse.session
-        return f"{session.amount} {session.currency.symbol}"
+        return f"{session.amount} kr."
 class DriveeLastChargingSessionSensor(CoordinatorEntity, SensorEntity):
     """Sensor for displaying the last charging session information."""
 
