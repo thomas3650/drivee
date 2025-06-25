@@ -29,6 +29,7 @@ async def async_setup_entry(
         DriveeChargePointNameSensor(coordinator),
         DriveeEVSEStatusSensor(coordinator),
         DriveeLastChargingSessionSensor(coordinator),
+        DriveeSessionPowerSensor(coordinator),
     ])
 
 class DriveeChargePointNameSensor(CoordinatorEntity, SensorEntity):
