@@ -1,16 +1,33 @@
 """ChargePoint DTO model."""
-from typing import Any, Union, List, Dict
+from typing import Any, Union, List, Dict, Optional
 from pydantic import Field, field_validator
 
 from .base_dto import DTOBase
 from .scheduling_intervals_dto import SchedulingIntervals
 from .evse_dto import EVSE
 
+class Location(DTOBase):
+    """Location information for a charge point."""
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
 class ChargePoint(DTOBase):
     """Model for a charge point."""
+    id: str
     name: str
+    location: Location
+    location_id: Optional[str] = None
+    postcode: Optional[str] = None
+    photo: Optional[str] = None
+    plug_and_charge: bool = False
+    smart_charging_enabled: bool = False
+    allowed_min_current_a: int
+    allowed_max_current_a: int
+    allowed_solar_min_power_kw: Optional[float] = None
+    allowed_max_power_kw: str
+    max_current_a: int
     status: str
-    allowed_max_power_kw: float = Field(alias='allowedMaxPowerKw')
+    is_rebooting: bool = False
     scheduling_intervals: SchedulingIntervals = Field(default_factory=SchedulingIntervals)
     evse: EVSE = Field(alias='evses')
 

@@ -26,6 +26,7 @@ This project is a Home Assistant custom integration written in Python. It provid
 - Energy readings should be cached to reduce API calls.
 
 ## 🧑‍💻 Coding Conventions
+- use 'camelCase' for the dto's and 'snake_case' for everything else.
 - Use `snake_case` for variables and functions.
 - Use `PascalCase` for class names.
 - All async functions should be prefixed with `async def`.

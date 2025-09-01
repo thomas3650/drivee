@@ -13,41 +13,45 @@ from .charging_period_dto import ChargingPeriod
 class ChargingSession(DTOBase):
     """Model for a charging session."""
     id: str
-    started_at: datetime
+    started_at: datetime = Field(alias='startedAt')
     duration: int = Field(ge=0)
-    total_duration: int = Field(ge=0)
-    energy: int = Field(ge=0)
-    power: int = Field(ge=0)
-    location_id: Optional[str] = None
-    evse_id: str
-    evse_status: str
-    payment_method_id: str
-    payment_method_type: str
+    total_duration: int = Field(alias='totalDuration', ge=0)
+    energy: int = Field(ge=0)  # Energy in Wh
+    power: int = Field(ge=0)  # Power in W
+    location_id: Optional[str] = Field(alias='locationId', default=None)
+    evse_id: str = Field(alias='evseId')
+    evse_status: str = Field(alias='evseStatus')
+    payment_method_id: str = Field(alias='paymentMethodId')
+    payment_method_type: str = Field(alias='paymentMethodType')
     amount: Decimal = Field(ge=0)
-    total_amount: Decimal = Field(ge=0)
-    amount_due: Decimal = Field(ge=0)
+    total_amount: Decimal = Field(alias='totalAmount', ge=0)
+    amount_due: Decimal = Field(alias='amountDue', ge=0)
     status: str
-    summary_seen: bool
-    payment_status: str
-    payment_details: Optional[PaymentDetails] = None
-    is_extending: bool
-    is_extended: bool
-    is_optimized: bool
-    stop_reason: Optional[str] = None
-    charging_state: str
-    is_session_timed_out: bool
-    stopped_at: Optional[datetime] = None
-    is_personal: bool
-    reimbursement_eligibility: bool
-    can_toggle_reimbursement_eligibility: bool
-    has_third_party_electricity_cost_integration_enabled: Optional[bool] = None
-    non_billable_energy: int = Field(ge=0)
-    currency_id: int
+    summary_seen: bool = Field(alias='summarySeen')
+    payment_status: str = Field(alias='paymentStatus')
+    payment_details: Optional[PaymentDetails] = Field(alias='paymentDetails', default=None)
+    is_extending: bool = Field(alias='isExtending')
+    is_extended: bool = Field(alias='isExtended')
+    is_optimized: bool = Field(alias='isOptimized')
+    stop_reason: Optional[str] = Field(alias='stopReason', default=None)
+    charging_state: str = Field(alias='chargingState')
+    is_session_timed_out: bool = Field(alias='isSessionTimedOut')
+    stopped_at: Optional[datetime] = Field(alias='stoppedAt', default=None)
+    is_personal: bool = Field(alias='isPersonal')
+    reimbursement_eligibility: bool = Field(alias='reimbursementEligibility')
+    can_toggle_reimbursement_eligibility: bool = Field(alias='canToggleReimbursementEligibility')
+    has_third_party_electricity_cost_integration_enabled: Optional[bool] = Field(
+        alias='hasThirdPartyElectricityCostIntegrationEnabled', 
+        default=None
+    )
+    non_billable_energy: int = Field(alias='nonBillableEnergy', ge=0)
+    currency_id: int = Field(alias='currencyId')
     currency: Currency
-    smart_charging: SmartCharging
-    electricity_cost: Decimal = Field(ge=0)
-    electricity_cost_currency_id: int
-    power_avg: float = Field(ge=0)
+    smart_charging: SmartCharging = Field(alias='smartCharging')
+    electricity_cost: Decimal = Field(alias='electricityCost', ge=0)
+    electricity_cost_currency_id: int = Field(alias='electricityCostCurrencyId')
+    power_avg: float = Field(alias='powerAvg', ge=0)
+    power_stats: Optional[Dict[str, Any]] = Field(alias='powerStats', default=None)
     is_using_charging_allowance: bool
     free_energy_wh: int = Field(ge=0)
     sca_pending_transaction: Optional[Any] = None
