@@ -1,12 +1,15 @@
 """Main script for Drivee client."""
+from __future__ import annotations
+
 import asyncio
 import os
-import json
 from datetime import datetime, timedelta
+
 from dotenv import load_dotenv
 import logging
-from client.drivee_client import DriveeClient
-from graph_utils import create_power_graph, create_charging_periods_chart
+
+from client.drivee_client import DriveeClient, DEFAULT_HISTORY_DAYS
+from client.dtos import ChargePoint
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -24,19 +27,27 @@ def get_credentials() -> tuple[str, str]:
     return username, password
 
 def format_duration(seconds: int) -> str:
-    """Format duration in seconds to a human-readable string."""
+    """Format duration in seconds to a human-readable string.
+    
+    Args:
+        seconds: Duration in seconds
+        
+    Returns:
+        Formatted string in the format 'Xh Ym'
+    """
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     return f"{hours}h {minutes}m"
 
-def display_charge_point_info(charge_point):
+def display_charge_point_info(charge_point: ChargePoint) -> None:
     """Display information about a charge point."""
     logger.info(f"\nCharge Point: {charge_point.name}")
     logger.info(f"Status: {charge_point.status}")
     logger.info(f"Max Power: {charge_point.allowed_max_power_kw}kW")
     logger.info(f"Smart Charging: {'Enabled' if charge_point.scheduling_intervals.off_peak_is_set else 'Disabled'}")
     
-    for evse in charge_point.evses:
+    if charge_point.evse:
+        evse = charge_point.evse
         logger.info(f"\n  EVSE {evse.id}:")
         logger.info(f"  Status: {evse.status}")
         logger.info(f"  Max Power: {evse.max_power/1000:.1f}kW")
@@ -54,13 +65,13 @@ def display_charge_point_info(charge_point):
             logger.info(f"      Power: {session.power/1000:.1f}kW")
             logger.info(f"      Cost: {session.amount} {session.currency.symbol}")
 
-async def display_charging_history(client: DriveeClient, days: int = 30):
+async def display_charging_history(client: DriveeClient, days: int = DEFAULT_HISTORY_DAYS) -> None:
     """
     Fetch and display charging history for the specified number of days.
     
     Args:
-        client (DriveeClient): The Drivee client instance
-        days (int): Number of days of history to fetch (default: 30)
+        client: The Drivee client instance
+        days: Number of days of history to fetch
     """
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -95,28 +106,24 @@ async def display_charging_history(client: DriveeClient, days: int = 30):
         logger.info(f"Energy Used: {session.energy/1000:.1f}kWh")
         logger.info(f"Cost: {session.amount} {session.currency.symbol}")
         
-        # Show charging periods chart
-        if charging_periods:
-            logger.info(create_charging_periods_chart(charging_periods))
         
-        # Show power history if available
-        if hasattr(session, 'power_history') and session.power_history:
-            logger.info("\nPower History:")
-            logger.info(create_power_graph(session.power_history))
-        elif hasattr(session, 'power_stats') and session.power_stats:
+        # Show power stats if available
+        if session.power_stats:
             logger.info("\nPower Statistics:")
-            logger.info(f"Average Power: {session.power_stats['averageKw']:.1f}kW")
-            logger.info(f"Max Power: {session.power_stats['maxKw']:.1f}kW")
+            logger.info(f"Average Power: {session.power_stats.get('averageKw', 0):.1f}kW")
+            logger.info(f"Max Power: {session.power_stats.get('maxKw', 0):.1f}kW")
             logger.info("\nPower Graph:")
-            logger.info(create_power_graph(session.power_stats))
     
 
-async def display_charge_points(client: DriveeClient):
+async def display_charge_points(client: DriveeClient) -> None:
     """
     Fetch and display information about the charge point.
     
     Args:
-        client (DriveeClient): The Drivee client instance
+        client: The Drivee client instance
+        
+    Raises:
+        Exception: If there is an error fetching the charge point data
     """
     logger.info("Checking charge point status...")
     charge_point = await client.get_charge_point()
@@ -127,36 +134,15 @@ async def display_charge_points(client: DriveeClient):
         return
 
     logger.info("\nCharge Point Summary:")
-    logger.info(f"\nCharge Point: {charge_point.name}")
-    logger.info(f"Status: {charge_point.status}")
-    logger.info(f"Max Power: {charge_point.allowed_max_power_kw}kW")
-    logger.info(f"Smart Charging: {'Enabled' if charge_point.scheduling_intervals.off_peak_is_set else 'Disabled'}")
-    
-    # Get the EVSE
-    evse = charge_point.evse
-    logger.info(f"\nEVSE Status: {evse.status}")
-    logger.info(f"Max Power: {evse.max_power/1000:.1f}kW")
-    logger.info(f"Current Type: {evse.current_type}")
-    logger.info(f"EVSE ID: {evse.id}")
-    
-    # Get the single connector
-    if evse.connectors:
-        connector = evse.connectors[0]
-        logger.info(f"\nConnector:")
-        logger.info(f"Name: {connector.name}")
-        logger.info(f"Status: {connector.status}")
-        
-    if evse.session:
-        session = evse.session
-        logger.info(f"\nActive Session:")
-        logger.info(f"Started: {session.started_at}")
-        logger.info(f"Duration: {format_duration(session.duration)}")
-        logger.info(f"Energy: {session.energy/1000:.1f}kWh")
-        logger.info(f"Power: {session.power/1000:.1f}kW")
-        logger.info(f"Cost: {session.amount} {session.currency.symbol}")
+    display_charge_point_info(charge_point)
 
-async def main():
-    """Main function to run the Drivee client."""
+async def main() -> None:
+    """Main function to run the Drivee client.
+    
+    Raises:
+        ValueError: If required environment variables are missing
+        Exception: If there is an error communicating with the Drivee API
+    """
     try:
         username, password = get_credentials()
         
@@ -174,4 +160,4 @@ async def main():
         raise
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

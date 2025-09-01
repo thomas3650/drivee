@@ -4,30 +4,57 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union, Dict
-
-import aiohttp
-from aiohttp import ClientSession
+from typing import Any, Optional, Union, Dict, Type, Final
+from aiohttp import ClientSession, ClientTimeout
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
     retry_if_exception_type,
-    RetryError
 )
 
-from .models import (
+from .dtos import (
     ChargePoint,
-    StartChargingResponse,
     ChargingHistory,
+    StartChargingResponse,
     EndChargingResponse,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-class AuthenticationError(Exception):
+# API Constants
+BASE_URL: Final[str] = "https://drivee.eu.charge.ampeco.tech/api/v1"
+DEFAULT_TIMEOUT: Final[int] = 30  # seconds
+DEFAULT_HISTORY_DAYS: Final[int] = 30
+RETRY_ATTEMPTS: Final[int] = 3
+RETRY_MIN_WAIT: Final[int] = 4
+RETRY_MAX_WAIT: Final[int] = 10
+
+# HTTP Headers
+DEFAULT_HEADERS: Final[Dict[str, str]] = {
+    "accept": "application/json, text/plain, */*",
+    "accept-language": "da-DK",
+    "Content-Type": "application/json;charset=utf-8",
+    "Host": "drivee.eu.charge.ampeco.tech",
+    "Connection": "Keep-Alive",
+    "Accept-Encoding": "gzip",
+    "User-Agent": "okhttp/4.9.2"
+}
+
+class DriveeError(Exception):
+    """Base exception for all Drivee client errors."""
+
+class AuthenticationError(DriveeError):
     """Raised when authentication fails."""
-    pass
+
+class APIError(DriveeError):
+    """Raised when the API returns an error."""
+    def __init__(self, status: int, message: str) -> None:
+        self.status = status
+        super().__init__(f"API error {status}: {message}")
+
+class SessionError(DriveeError):
+    """Raised when there are session-related errors."""
 
 class DriveeClient:
     """Client for interacting with the Drivee REST API."""
@@ -38,8 +65,17 @@ class DriveeClient:
         password: str,
         device_id: str = "b1a9feedadc049ba",
         app_version: str = "2.126.0",
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> None:
-        """Initialize the Drivee client."""
+        """Initialize the Drivee client.
+        
+        Args:
+            username: The username for authentication
+            password: The password for authentication
+            device_id: The device ID to use for API requests
+            app_version: The app version to report to the API
+            timeout: Request timeout in seconds
+        """
         self.username = username
         self.password = password
         self.device_id = device_id
@@ -47,19 +83,39 @@ class DriveeClient:
         self._access_token: Optional[str] = None
         self._token_expires_at: Optional[datetime] = None
         self._session: Optional[ClientSession] = None
-        self._base_url = "https://drivee.eu.charge.ampeco.tech/api/v1"
+        self._timeout = ClientTimeout(total=timeout)
         self.evse_id: Optional[str] = None
         self.session_id: Optional[str] = None
         _LOGGER.debug("DriveeClient initialized with username: %s, device_id: %s", username, device_id)
 
+    async def _ensure_session(self) -> ClientSession:
+        """Ensure we have an active client session.
+        
+        Returns:
+            The active client session
+            
+        Raises:
+            SessionError: If unable to create a session
+        """
+        if not self._session:
+            try:
+                self._session = ClientSession(timeout=self._timeout)
+                _LOGGER.debug("Created new aiohttp ClientSession")
+            except Exception as e:
+                raise SessionError(f"Failed to create session: {e}") from e
+        return self._session
+
     async def __aenter__(self) -> "DriveeClient":
         """Async context manager entry."""
-        if not self._session:
-            self._session = aiohttp.ClientSession()
-            _LOGGER.debug("Created new aiohttp ClientSession")
+        await self._ensure_session()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[Any]
+    ) -> None:
         """Async context manager exit."""
         if self._session:
             await self._session.close()
@@ -70,21 +126,13 @@ class DriveeClient:
     async def authenticate(self) -> None:
         """Authenticate with the Drivee API."""
         _LOGGER.info("Authenticating with Drivee API")
-        if not self._session:
-            self._session = aiohttp.ClientSession()
-            _LOGGER.debug("Created new aiohttp ClientSession for authentication")
+        await self._ensure_session()
 
-        url = f"{self._base_url}/app/oauth/token"
+        url = f"{BASE_URL}/app/oauth/token"
         headers = {
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "da-DK",
+            **DEFAULT_HEADERS,
             "x-device-id": self.device_id,
             "x-app-version": self.app_version,
-            "Content-Type": "application/json;charset=utf-8",
-            "Host": "drivee.eu.charge.ampeco.tech",
-            "Connection": "Keep-Alive",
-            "Accept-Encoding": "gzip",
-            "User-Agent": "okhttp/4.9.2"
         }
         data = {
             "username": self.username,
@@ -112,10 +160,19 @@ class DriveeClient:
                 
 
     async def refresh_state(self) -> ChargePoint:
-        """Refresh the client state with latest charge point data."""
+        """Refresh the client state with latest charge point data.
+        
+        Returns:
+            ChargePoint: The updated charge point data.
+            
+        Raises:
+            Exception: If no charge points are available or if there is an error fetching the data.
+        """
         _LOGGER.info("Refreshing Drivee client state")
         try:
             charge_point = await self.get_charge_point()
+            if not charge_point:
+                raise Exception("No charge points available")
 
             _LOGGER.info("Retrieved charge point: %s", charge_point.name)
             if not charge_point.evse:
@@ -135,8 +192,8 @@ class DriveeClient:
             raise
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=RETRY_MIN_WAIT, max=RETRY_MAX_WAIT),
         retry=retry_if_exception_type(AuthenticationError),
         reraise=True
     )
@@ -166,10 +223,6 @@ class DriveeClient:
         if json:
             _LOGGER.info("Request payload: %s", json)
             
-        if not self._session:
-            self._session = aiohttp.ClientSession()
-            _LOGGER.info("Created new aiohttp ClientSession for request")
-
         # Ensure we have a valid token
         if not self._access_token or (
             self._token_expires_at and datetime.now() >= self._token_expires_at
@@ -177,22 +230,17 @@ class DriveeClient:
             _LOGGER.info("Token expired or missing, re-authenticating")
             await self.authenticate()
 
-        url = f"{self._base_url}/{endpoint.lstrip('/')}"
+        url = f"{BASE_URL}/{endpoint.lstrip('/')}"
         headers = {
             "Authorization": f"Bearer {self._access_token}",
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "da-DK",
+            **DEFAULT_HEADERS,
             "x-device-id": self.device_id,
             "x-app-version": self.app_version,
-            "Content-Type": "application/json;charset=utf-8",
-            "Host": "drivee.eu.charge.ampeco.tech",
-            "Connection": "Keep-Alive",
-            "Accept-Encoding": "gzip",
-            "User-Agent": "okhttp/4.9.2"
         }
         _LOGGER.info("endpoint: '%s'", url)
+        session = await self._ensure_session()
         try:
-            async with self._session.request(
+            async with session.request(
                 method, 
                 url, 
                 headers=headers, 
@@ -222,11 +270,14 @@ class DriveeClient:
             _LOGGER.exception("Error making request: %s", str(e))
             raise
 
-    async def get_charge_point(self) -> ChargePoint:
+    async def get_charge_point(self) -> Optional[ChargePoint]:
         """Get the first charge point.
         
         Returns:
             The first charge point or None if no charge points are available.
+            
+        Raises:
+            Exception: If there is an error fetching the charge point data.
         """
         _LOGGER.info("Fetching charge point")
         try:
@@ -237,7 +288,7 @@ class DriveeClient:
                 return None
                 
             _LOGGER.info("Retrieved %d charge points, using first one", len(data["data"]))
-            charge_point = ChargePoint.from_dict(data["data"][0])
+            charge_point = ChargePoint.model_validate(data["data"][0])
             _LOGGER.info("Charge point status: %s, EVSE status: %s", 
                          charge_point.status, 
                          getattr(charge_point.evse, "status", "unknown"))
@@ -259,7 +310,7 @@ class DriveeClient:
         """
         _LOGGER.info("Fetching charging history from %s to %s", start_date, end_date)
         if not start_date:
-            start_date = datetime.now() - timedelta(days=30)
+            start_date = datetime.now() - timedelta(days=DEFAULT_HISTORY_DAYS)
         if not end_date:
             end_date = datetime.now()
 
@@ -276,7 +327,7 @@ class DriveeClient:
             "end_date": end_date
             }
             data = await self._make_request("GET", "app/profile/session_history", params=params)
-            history = ChargingHistory.from_dict(data)
+            history = ChargingHistory.model_validate(data)
             _LOGGER.debug("Retrieved %d charging history entries", len(history.sessions))
             return history
         except Exception as e:
@@ -299,7 +350,7 @@ class DriveeClient:
             data = await self._make_request("POST", f"app/session/{self.session_id}/end")
             _LOGGER.info("Successfully ended charging session")
             self.session_id = None
-            response = EndChargingResponse.from_dict(data)
+            response = EndChargingResponse.model_validate(data)
             _LOGGER.info("End charging response: Session ID %s, status %s", 
                          response.session.id, response.session.status)
             return response
@@ -321,7 +372,7 @@ class DriveeClient:
                 "app/session/start",
                 json={"evseId": self.evse_id}
             )
-            response = StartChargingResponse.from_dict(data)
+            response = StartChargingResponse.model_validate(data)
             self.session_id = response.session.id
             _LOGGER.info("Successfully started charging, new session ID: %s", self.session_id)
             _LOGGER.info("Start charging response: Session ID %s, status %s", 
