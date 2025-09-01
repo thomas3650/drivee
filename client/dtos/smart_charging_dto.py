@@ -1,6 +1,6 @@
 """SmartCharging DTO."""
 from typing import Dict, List, Optional
-from datetime import datetime, time
+from datetime import datetime
 from pydantic import Field, field_validator
 
 from .base_dto import DTOBase
@@ -18,23 +18,6 @@ class SmartCharging(DTOBase):
     start_time: str
     end_time: str
     weekdays: Optional[List[str]] = None
-
-    @property
-    def is_scheduled(self) -> bool:
-        """Check if charging is scheduled."""
-        return self.enabled and self.mode == "schedule"
-
-    @property
-    def is_solar_charging(self) -> bool:
-        """Check if solar charging is enabled."""
-        return self.enabled and self.use_solar
-
-    def _parse_time(self, time_str: str) -> time:
-        """Parse time string to time object."""
-        try:
-            return datetime.strptime(time_str, "%H:%M:%S").time()
-        except ValueError as e:
-            raise ValueError(f"Invalid time format. Use HH:MM:SS: {e}")
 
     @field_validator('start_time', 'end_time')
     @classmethod

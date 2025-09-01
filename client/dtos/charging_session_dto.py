@@ -61,28 +61,6 @@ class ChargingSession(DTOBase):
     smart_charging_schedule: Optional[List[Dict[str, Any]]] = None
     power_stats: Optional[Dict[str, Any]] = None
 
-    @property
-    def is_active(self) -> bool:
-        """Check if session is currently active."""
-        return self.status == "active" and not self.stopped_at
-
-    @property
-    def total_cost(self) -> Decimal:
-        """Calculate total cost including fees."""
-        return self.amount + self.amount_due
-
-    @property
-    def duration_minutes(self) -> float:
-        """Get duration in minutes."""
-        return self.duration / 60
-
-    @property
-    def average_power_kw(self) -> float:
-        """Calculate average power in kW."""
-        if self.duration == 0:
-            return 0.0
-        return self.energy / (self.duration / 3600)  # kWh per hour
-
     @field_validator('charging_state')
     @classmethod
     def validate_charging_state(cls, v: str) -> str:
