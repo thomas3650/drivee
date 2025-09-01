@@ -14,6 +14,13 @@ This project is a Home Assistant custom integration written in Python. It provid
   - `sensor.py`, `switch.py`, `config_flow.py`: Platform-specific logic.
 - Uses `asyncio` for non-blocking I/O.
 - Communicates with Wallbox charger via REST API (or optionally MQTT).
+- Business Logic and Data Layer:
+  - All business logic must reside in model classes in the `client/models/` directory
+  - DTOs in `client/dtos/` are pure data transfer objects with no business logic
+  - Models should encapsulate DTOs and expose only business-relevant properties/methods
+  - DTOs should never be exposed outside the model layer
+  - Use Protocol-based typing for DTO interfaces in models
+- **Wallbox API/client logic is located in the `client/` folder. Keep all Wallbox communication and protocol handling in this folder for separation of concerns.**
 
 ## 🧪 Testing & Validation
 - Use `pytest` for unit tests.
@@ -54,9 +61,53 @@ This project is a Home Assistant custom integration written in Python. It provid
   - `sensor.py`, `switch.py`, `config_flow.py`: Platform-specific logic.
 - Uses `asyncio` for non-blocking I/O.
 - Communicates with Wallbox charger via REST API (or optionally MQTT).
+- Business Logic and Data Layer:
+  - All business logic must reside in model classes in the `client/models/` directory
+  - DTOs in `client/dtos/` are pure data transfer objects with no business logic
+  - Models should encapsulate DTOs and expose only business-relevant properties/methods
+  - DTOs should never be exposed outside the model layer
+  - Use Protocol-based typing for DTO interfaces in models
 - **Wallbox API/client logic is located in the `client/` folder. Keep all Wallbox communication and protocol handling in this folder for separation of concerns.**
 
 ## 🛠️ Formatting & Compatibility
 - Use `black` and `isort` for code formatting.
 - Target Python 3.10+ and Home Assistant 2024.1 or newer.
 - Use Home Assistant's `logging` module for all logs.
+
+## 🔄 Code Health & Tasks
+
+### 🚨 Critical Tasks
+- [ ] Move all business logic from DTOs to model classes
+- [ ] Ensure all DTOs follow naming convention with 'DTO' suffix
+- [ ] Add Protocol-based typing for all DTO interfaces in models
+- [ ] Fix any direct DTO exposure outside the model layer
+
+### 🏗️ Architecture Improvements
+- [ ] Complete Pydantic migration for all DTOs
+- [ ] Implement comprehensive error handling in API client
+- [ ] Add proper request rate limiting and throttling
+- [ ] Create caching strategy for frequently accessed data
+
+### 🧪 Testing & Validation Tasks
+- [ ] Add unit tests for all model classes
+- [ ] Create integration tests for API client
+- [ ] Add test coverage for error scenarios
+- [ ] Implement mock responses for all API endpoints
+
+### 📚 Documentation Needs
+- [ ] Document model class implementation guidelines
+- [ ] Create DTO design and validation guidelines
+- [ ] Add API client usage examples
+- [ ] Update configuration examples
+
+### 🔐 Security Tasks
+- [ ] Audit credential handling
+- [ ] Review input validation
+- [ ] Check for sensitive data exposure
+- [ ] Validate API error responses
+
+### 🎯 Feature Roadmap
+- [ ] Implement smart charging schedules
+- [ ] Add energy usage analytics
+- [ ] Support multiple charger configurations
+- [ ] Implement offline mode capabilities
