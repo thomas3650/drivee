@@ -144,11 +144,12 @@ class DriveeClient:
         _LOGGER.debug("Authentication request URL: %s", url)
 
         try:
-            async with self._session.post(url, headers=headers, json={**data, "password": self.password}) as response:
+            session = await self._ensure_session()
+            async with session.post(url, headers=headers, json={**data, "password": self.password}) as response:
                 if response.status != 200:
                     error_text = await response.text()
                     _LOGGER.error("Authentication failed with status %d: %s", response.status, error_text)
-                    raise Exception(f"Authentication failed: {error_text}")
+                    raise AuthenticationError(f"Authentication failed: {error_text}")
                 
                 result = await response.json()
                 self._access_token = result["access_token"]
