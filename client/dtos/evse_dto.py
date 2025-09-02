@@ -18,7 +18,9 @@ class EVSEDTO(BaseDTO):
     # Core identifiers
     id: str = Field(description="Unique identifier for the EVSE")
     identifier: str = Field(description="External/visible identifier")
-    
+    status: str = Field(description="Current operational status")
+    connectors: List[ConnectorDTO] = Field(default_factory=list[ConnectorDTO], description="List of connectors on this EVSE")
+
     # Status and capabilities
     status: str = Field(description="Current operational status")
     max_power: int = Field(

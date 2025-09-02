@@ -1,37 +1,33 @@
 """
 Connector model that encapsulates connector business logic.
 """
+from __future__ import annotations
 
-from enum import Enum
-from typing import Protocol
+from typing import cast
 
 from ..dtos.connector_dto import ConnectorDTO
-from .base_model import BaseModel
+from .base_model import BaseModel, BusinessRuleError
+from .protocols import ConnectorDTOProtocol
+from .types import ConnectorStatus
 
-class ConnectorStatus(Enum):
-    """Valid connector statuses."""
-    AVAILABLE = 'Available'
-    OCCUPIED = 'Occupied'
-    RESERVED = 'Reserved'
-    UNAVAILABLE = 'Unavailable'
-    FAULTED = 'Faulted'
-
-class ConnectorProtocol(Protocol):
-    """Protocol defining the interface that ConnectorDTO must implement."""
-    id: str
-    type: str
-    status: str
-    max_power: float
-    
-class Connector(BaseModel['ConnectorDTO']):
+class Connector(BaseModel[ConnectorDTOProtocol]):
     """Model representing a charging connector with its business logic.
     
     This model encapsulates the ConnectorDTO and provides business-relevant
     properties and methods while enforcing business rules.
     """
+    _dto: ConnectorDTOProtocol  # Type hint for the DTO
     
     def __init__(self, dto: ConnectorDTO) -> None:
-        super().__init__(dto)
+        """Initialize a new connector.
+        
+        Args:
+            dto: The DTO containing the connector data
+            
+        Raises:
+            ValidationError: If the DTO is invalid
+        """
+        super().__init__(cast(ConnectorDTOProtocol, dto))
     
     @property
     def type(self) -> str:
@@ -64,7 +60,7 @@ class Connector(BaseModel['ConnectorDTO']):
         """
         return self.max_power >= required_power
     
-    def validate_business_rules(self) -> bool:
+    def validate_business_rules(self) -> None:
         """Validate that this connector satisfies all business rules.
         
         Business Rules:
@@ -72,18 +68,17 @@ class Connector(BaseModel['ConnectorDTO']):
         - Status must be a valid value
         - Maximum power must be positive
         
-        Returns:
-            bool: True if all business rules are satisfied, False otherwise
+        Raises:
+            BusinessRuleError: If any business rule is violated
         """
         if not self.type:
-            return False
+            raise BusinessRuleError("Connector type must not be empty")
             
         try:
             ConnectorStatus(self._dto.status)
         except ValueError:
-            return False
+            valid_statuses = [status.value for status in ConnectorStatus]
+            raise BusinessRuleError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
             
         if self.max_power <= 0:
-            return False
-            
-        return True
+            raise BusinessRuleError("Maximum power must be positive")

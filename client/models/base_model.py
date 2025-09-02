@@ -12,18 +12,45 @@ class DTOProtocol(Protocol):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     
-    def dict(self, **kwargs: Any) -> Dict[str, Any]:
+    def dict(self, *,  # noqa: A003
+            include: Optional[Any] = None,
+            exclude: Optional[Any] = None,
+            by_alias: bool = False,
+            exclude_unset: bool = False,
+            exclude_defaults: bool = False,
+            exclude_none: bool = False,
+            **kwargs: Any) -> Dict[str, Any]:
         """Convert the DTO to a dictionary."""
         ...
         
-    def model_dump(self, **kwargs: Any) -> Dict[str, Any]:
+    def model_dump(self, *,
+                mode: str = 'python',
+                include: Optional[Any] = None,
+                exclude: Optional[Any] = None,
+                by_alias: bool = False,
+                exclude_unset: bool = False,
+                exclude_defaults: bool = False,
+                exclude_none: bool = False,
+                **kwargs: Any) -> Dict[str, Any]:
         """Dump the model to a dictionary."""
         ...
 
-# Type variable bound to our DTO protocol
-T = TypeVar('T', bound=DTOProtocol)
+# Type variable for our model's DTO type
+D = TypeVar('D', bound=DTOProtocol, covariant=True)
 
-class BaseModel(Generic[T], ABC):
+class ModelError(Exception):
+    """Base class for all model-related errors."""
+    pass
+
+class BusinessRuleError(ModelError):
+    """Error raised when a business rule is violated."""
+    pass
+
+class ValidationError(ModelError):
+    """Error raised when model validation fails."""
+    pass
+
+class BaseModel(Generic[D], ABC):
     """Base class for all models in the system.
     
     Models encapsulate DTOs and provide business logic. They should never expose
@@ -37,9 +64,12 @@ class BaseModel(Generic[T], ABC):
         id (str): Unique identifier for the model
         created_at (Optional[datetime]): When the entity was created
         updated_at (Optional[datetime]): When the entity was last updated
+        
+    Raises:
+        ValidationError: If the provided DTO doesn't match the required protocol
     """
     
-    def __init__(self, dto: T) -> None:
+    def __init__(self, dto: D) -> None:
         """Initialize the model with a DTO.
         
         Args:
@@ -75,66 +105,37 @@ class BaseModel(Generic[T], ABC):
         return self._dto.model_dump()
     
     @abstractmethod
-    def validate_business_rules(self) -> bool:
+    def validate_business_rules(self) -> None:
         """Validate that this model satisfies all business rules.
         
         Each model class must implement this method to enforce its specific
         business rules. This is separate from DTO validation, which only
         handles data structure validation.
         
-        Returns:
-            bool: True if all business rules are satisfied, False otherwise
+        Raises:
+            BusinessRuleError: If any business rule is violated
             
         Example:
             ```python
-            def validate_business_rules(self) -> bool:
+            def validate_business_rules(self) -> None:
                 if not self.name:
-                    return False
+                    raise BusinessRuleError("Name cannot be empty")
                 if self.price < 0:
-                    return False
-                return True
+                    raise BusinessRuleError("Price must be non-negative")
             ```
         """
         ...
-    """Model representing a charging session with its business logic.
     
-    This model encapsulates the ChargingSessionDTO and provides business-relevant
-    properties and methods while enforcing business rules.
-    """
-    
-
-    
-    def validate_business_rules(self) -> bool:
-        """Validate that this charging session satisfies all business rules.
+    def is_valid(self) -> bool:
+        """Check if the model is in a valid state.
         
-        Business Rules:
-        1. Session must have a valid EVSE ID
-        2. Start time must be before end time if session has ended
-        3. Energy and power values must be non-negative
-        4. Total amount must be non-negative
-        5. Must have at least one charging period
+        This combines DTO validation with business rule validation.
         
         Returns:
-            bool: True if all business rules are satisfied, False otherwise
+            bool: True if both the DTO and business rules are valid
         """
-        # Must have valid EVSE ID
-        if not self.evse_id:
+        try:
+            self.validate_business_rules()
+            return True
+        except BusinessRuleError:
             return False
-            
-        # If ended, end time must be after start time
-        if self.stopped_at and self.stopped_at <= self.started_at:
-            return False
-            
-        # Energy and power must be non-negative
-        if self.energy < 0 or self.power < 0:
-            return False
-            
-        # Amount must be non-negative
-        if self.total_amount < Decimal(0):
-            return False
-            
-        # Must have at least one charging period
-        if not self.charging_periods:
-            return False
-            
-        return True

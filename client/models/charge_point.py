@@ -2,25 +2,18 @@
 ChargePoint model that encapsulates charge point business logic.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
-from typing import List, Protocol
+from typing import List
 
 from ..dtos.charge_point_dto import ChargePointDTO
-from ..dtos.connector_dto import ConnectorDTO
-from ..dtos.evse_dto import EVSEDTO
-from .base_model import BaseModel
+from .base_model import BaseModel, BusinessRuleError
 from .connector import Connector
 from .evse import EVSE
+from .protocols import ChargePointDTOProtocol
 
-class ChargePointProtocol(Protocol):
-    """Protocol defining the interface that ChargePointDTO must implement."""
-    id: str
-    name: str
-    location_id: str
-    evses: List[EVSEDTO]
-    last_updated: datetime
-    
-class ChargePoint(BaseModel['ChargePointDTO']):
+class ChargePoint(BaseModel[ChargePointDTOProtocol]):
     """Model representing a charging point with its business logic.
     
     This model encapsulates the ChargePointDTO and provides business-relevant
@@ -28,8 +21,16 @@ class ChargePoint(BaseModel['ChargePointDTO']):
     """
     
     def __init__(self, dto: ChargePointDTO) -> None:
+        """Initialize a new charge point.
+        
+        Args:
+            dto: The DTO containing the charge point data
+            
+        Raises:
+            ValidationError: If the DTO is invalid
+        """
         super().__init__(dto)
-        self._evses = [EVSE(evse) for evse in dto.evses]
+        self._evses = [EVSE(evse) for evse in dto.evses or []]
     
     @property
     def name(self) -> str:
@@ -57,12 +58,13 @@ class ChargePoint(BaseModel['ChargePointDTO']):
         Returns:
             List[Connector]: List of connectors that are currently available for charging
         """
-        available = []
+        available: List[Connector] = []
         for evse in self._evses:
-            available.extend(evse.get_available_connectors())
+            connectors = evse.get_available_connectors()
+            available.extend(connectors)
         return available
     
-    def validate_business_rules(self) -> bool:
+    def validate_business_rules(self) -> None:
         """Validate that this charge point satisfies all business rules.
         
         Business Rules:
@@ -71,19 +73,20 @@ class ChargePoint(BaseModel['ChargePointDTO']):
         - Location ID must be set
         - Name must not be empty
         
-        Returns:
-            bool: True if all business rules are satisfied, False otherwise
+        Raises:
+            BusinessRuleError: If any business rule is violated
         """
         if not self._evses:
-            return False
+            raise BusinessRuleError("Charge point must have at least one EVSE")
             
-        if not all(evse.validate_business_rules() for evse in self._evses):
-            return False
+        for evse in self._evses:
+            try:
+                evse.validate_business_rules()
+            except BusinessRuleError as e:
+                raise BusinessRuleError(f"Invalid EVSE {evse.id}: {str(e)}")
             
         if not self.location_id:
-            return False
+            raise BusinessRuleError("Location ID must be set")
             
         if not self.name:
-            return False
-            
-        return True
+            raise BusinessRuleError("Name must not be empty")

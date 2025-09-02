@@ -3,7 +3,7 @@ from __future__ import annotations
 """DTOs for charge point data transfer."""
 
 from datetime import datetime
-from typing import  Optional
+from typing import List, Optional
 
 from pydantic import Field, ConfigDict
 
@@ -22,7 +22,7 @@ class ChargePointDTO(BaseDTO):
     id: str = Field(description="Unique identifier for the charge point")
     name: str = Field(description="Display name of the charge point")
     location: LocationDTO = Field(description="Geographic location information")
-    location_id: Optional[str] = Field(None, description="ID of the location where installed")
+    location_id: str = Field(description="ID of the location where installed")
     postcode: Optional[str] = Field(None, description="Postal code of the location")
     photo: Optional[str] = Field(None, description="URL to charge point photo")
     last_updated: datetime = Field(description="Timestamp of last status update")
@@ -45,7 +45,7 @@ class ChargePointDTO(BaseDTO):
         default=None,
         description="Charging schedule intervals"
     )
-    evses: Optional[EVSEDTO] = Field(
-        default=None,
+    evses: List[EVSEDTO] = Field(
+        default_factory=list[EVSEDTO],
         description="List of EVSEs at this charge point"
     )
