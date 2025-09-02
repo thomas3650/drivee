@@ -33,6 +33,7 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
         """
         super().__init__(cast(ChargePointDTOProtocol, dto))
         self._evses = [EVSE(evse) for evse in dto.evses or []]
+        self.validate_business_rules()
     
     @property
     def name(self) -> str:
@@ -48,6 +49,11 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
     def evses(self) -> List[EVSE]:
         """Get all EVSEs (Electric Vehicle Supply Equipment) at this charge point."""
         return self._evses
+    
+    @property
+    def evse(self) -> EVSE:
+        """Get EVSE (Electric Vehicle Supply Equipment) at this charge point."""
+        return self._evses[0]
     
     @property
     def last_updated(self) -> datetime:
@@ -86,6 +92,8 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
                 evse.validate_business_rules()
             except BusinessRuleError as e:
                 raise BusinessRuleError(f"Invalid EVSE {evse.id}: {str(e)}")
+        if(len(self._evses) > 1):
+            raise BusinessRuleError("Charge point must have only one EVSE")
             
         if not self.location_id:
             raise BusinessRuleError("Location ID must be set")

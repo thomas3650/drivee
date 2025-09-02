@@ -20,6 +20,9 @@ class EVSEStatus(str, Enum):
     RESERVED = "Reserved"
     UNAVAILABLE = "Unavailable"
     FAULTED = "Faulted"
+    CHARGING = "charging"
+    SUSPENDED = "suspended"
+    PENDING = "pending"
 
 class ConnectorStatus(str, Enum):
     """Valid connector operational statuses."""

@@ -4,15 +4,13 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta
-from decimal import Decimal
-from typing import Dict, List, Any, TypedDict, Optional, cast
+from typing import Dict, Any, TypedDict, Optional
 
 from dotenv import load_dotenv
 import logging
 
 from client.drivee_client import DriveeClient, DEFAULT_HISTORY_DAYS
-from client.dtos.charging_session_dto import ChargingSessionDTO
-from client.models import ChargePoint, ChargingSession
+from client.models import ChargePoint
 from client.models.base_model import BusinessRuleError
 
 RawSessionData = Dict[str, Any]

@@ -29,7 +29,7 @@ class ChargePointDTOProtocol(DTOProtocol, Protocol):
     name: str
     location_id: str
     last_updated: datetime
-    evses: List['EVSEDTOProtocol']
+    evse: EVSEDTOProtocol
     status: str
     photo: Optional[str]
     plug_and_charge: bool

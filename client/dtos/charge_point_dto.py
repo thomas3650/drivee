@@ -8,6 +8,7 @@ from typing import List, Optional
 from .base_dto import BaseDTO
 from .dto_protocol import ChargePointDTOProtocol  # type: ignore # Used for type checking
 from .evse_dto import EVSEDTO
+from .scheduling_intervals_dto import SchedulingIntervalDTO
 
 @dataclass
 class LocationDTO(BaseDTO):
@@ -43,3 +44,5 @@ class ChargePointDTO(BaseDTO):  # type: ignore[type-arg] # Implements ChargePoin
     postcode: Optional[str] = None
     allowed_solar_min_power_kw: Optional[float] = None
     location: Optional[LocationDTO] = None
+    scheduling_intervals: List[SchedulingIntervalDTO] = field(default_factory=lambda: list())
+    disable_automatic_firmware_updates: bool = False

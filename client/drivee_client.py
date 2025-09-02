@@ -178,20 +178,12 @@ class DriveeClient:
             charge_point = await self.get_charge_point()
 
             _LOGGER.info("Retrieved charge point: %s", charge_point.name)
-            evses = charge_point.evses
-            if not evses:
-                raise Exception("No EVSE found")
-                
-            self.evse_id = evses[0].id
+                            
+            self.evse_id = charge_point.evse.id
             _LOGGER.info("Set EVSE ID to: %s", self.evse_id)
-            
-            # Get current session if any by checking EVSE status
-            active_evses = [
-                evse for evse in evses 
-                if evse.status == "charging"
-            ]
-            if active_evses:
-                self.session_id = active_evses[0].id
+          
+            if charge_point.evse.is_charging:
+                self.session_id = charge_point.evse.id
                 _LOGGER.info("Set session ID to: %s", self.session_id)
             else:
                 self.session_id = None

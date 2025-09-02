@@ -32,15 +32,40 @@ class EVSE(BaseModel[EVSEDTOProtocol]):
         self._connectors = [Connector(conn) for conn in dto.connectors or []]
     
     @property
-    def status(self) -> str:
-        """Get the current status of the EVSE."""
-        return self._dto.status
+    def status(self) -> EVSEStatus:
+        """Get the current status of the EVSE.
+        
+        Returns:
+            EVSEStatus: The current operational status of the EVSE
+        
+        Raises:
+            ValueError: If the status from DTO is not a valid EVSEStatus value
+        """
+        return EVSEStatus(self._dto.status)
     
     @property
     def connectors(self) -> List[Connector]:
         """Get all connectors on this EVSE."""
         return self._connectors
     
+    @property
+    def id(self) -> str:
+        """Get the ID of this EVSE."""
+        return self._dto.id
+
+    @property
+    def is_charging(self) -> bool:
+        """Check if this EVSE is currently in a charging state.
+        
+        Returns:
+            bool: True if the EVSE is in a charging, suspended, or pending state
+        """
+        return self.status in (
+            EVSEStatus.CHARGING,
+            EVSEStatus.SUSPENDED,
+            EVSEStatus.PENDING
+        )
+        
     def get_available_connectors(self) -> List[Connector]:
         """Get all connectors that are currently available for charging.
         
