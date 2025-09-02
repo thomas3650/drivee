@@ -1,11 +1,19 @@
-"""Response models for charging operations."""
-from .base_dto import DTOBase
-from .charging_session_dto import ChargingSession
+"""DTOs for charging operation responses."""
+from pydantic import Field
 
-class StartChargingResponse(DTOBase):
-    """Response model for start charging request."""
-    session: ChargingSession
+from .base_dto import BaseDTO
+from .charging_session_dto import ChargingSessionDTO
 
-class EndChargingResponse(DTOBase):
-    """Response model for end charging request."""
-    session: ChargingSession
+class StartChargingResponseDTO(BaseDTO):
+    """DTO for start charging request response.
+    
+    Contains the charging session that was started.
+    """
+    session: ChargingSessionDTO = Field(description="The started charging session")
+
+class EndChargingResponseDTO(BaseDTO):
+    """DTO for end charging request response.
+    
+    Contains the charging session that was ended.
+    """
+    session: ChargingSessionDTO = Field(description="The ended charging session")

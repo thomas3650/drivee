@@ -111,3 +111,33 @@ This project is a Home Assistant custom integration written in Python. It provid
 - [ ] Add energy usage analytics
 - [ ] Support multiple charger configurations
 - [ ] Implement offline mode capabilities
+
+## 🔍 Static Code Analysis
+- Use `pylance` for advanced type checking and static analysis
+  - Configure strict type checking mode in VS Code settings
+  - Address all type-related warnings and errors
+  - Use proper type hints for all function parameters and return values
+- Use `pyright` for command-line type checking in CI/CD
+  - Run with `--strict` flag for maximum type safety
+  - Configure in `pyrightconfig.json`
+- Use `black` for code formatting
+  - Line length: 88 characters
+  - Run before committing changes
+- Use `isort` for import sorting
+  - Compatible with black formatting
+  - Run as part of pre-commit hooks
+- Use `flake8` for style guide enforcement
+  - Max line length: 88 (matching black)
+  - Ignore select rules that conflict with black
+- Use `mypy` for additional type checking
+  - Configure with `mypy.ini` or `setup.cfg`
+  - Run in strict mode with `--strict`
+
+Example VS Code settings for Pylance:
+```json
+{
+    "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.useLibraryCodeForTypes": true
+}
+```

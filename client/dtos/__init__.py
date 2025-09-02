@@ -1,31 +1,48 @@
-"""DTOs for the Drivee API responses."""
+"""DTOs for the Drivee API responses.
 
-from .base_dto import DTOBase
-from .charging_period_dto import ChargingPeriod
-from .currency_dto import Currency
-from .smart_charging_dto import SmartCharging
-from .payment_details_dto import PaymentDetails
-from .charging_session_dto import ChargingSession
-from .connector_dto import Connector
-from .scheduling_intervals_dto import SchedulingIntervals
-from .evse_dto import EVSE
-from .charge_point_dto import ChargePoint
-from .charging_responses_dto import StartChargingResponse, EndChargingResponse
-from .charging_history_dto import ChargingHistory, ChargingHistoryEntry
+This package contains all Data Transfer Objects (DTOs) used to serialize and
+deserialize data between the Drivee API and the client. DTOs are pure data
+classes with validation but no business logic.
+"""
+
+from .base_dto import BaseDTO
+from .charge_point_dto import ChargePointDTO, LocationDTO
+from .charging_history_dto import ChargingHistoryDTO, ChargingHistoryEntryDTO
+from .charging_period_dto import ChargingPeriodDTO
+from .charging_responses_dto import StartChargingResponseDTO, EndChargingResponseDTO
+from .charging_session_dto import ChargingSessionDTO
+from .connector_dto import ConnectorDTO
+from .currency_dto import CurrencyDTO
+from .evse_dto import EVSEDTO
+from .payment_details_dto import PaymentDetailsDTO
+from .scheduling_intervals_dto import SchedulingIntervalsDTO
+from .smart_charging_dto import SmartChargingDTO
 
 __all__ = [
-    'DTOBase',
-    'ChargingPeriod',
-    'Currency',
-    'SmartCharging',
-    'PaymentDetails',
-    'ChargingSession',
-    'Connector',
-    'SchedulingIntervals',
-    'EVSE',
-    'ChargePoint',
-    'StartChargingResponse',
-    'EndChargingResponse',
-    'ChargingHistory',
-    'ChargingHistoryEntry',
+    # Base classes
+    'BaseDTO',
+    
+    # Charge point related
+    'ChargePointDTO',
+    'LocationDTO',
+    'EVSEDTO',
+    'ConnectorDTO',
+    
+    # Charging session related
+    'ChargingSessionDTO',
+    'ChargingPeriodDTO',
+    'ChargingHistoryDTO',
+    'ChargingHistoryEntryDTO',
+    
+    # Payment related
+    'CurrencyDTO',
+    'PaymentDetailsDTO',
+    
+    # Smart charging related
+    'SmartChargingDTO',
+    'SchedulingIntervalsDTO',
+    
+    # API responses
+    'StartChargingResponseDTO',
+    'EndChargingResponseDTO',
 ]
