@@ -1,51 +1,45 @@
 """DTOs for charge point data transfer."""
 from __future__ import annotations
-"""DTOs for charge point data transfer."""
 
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import Field, ConfigDict
-
 from .base_dto import BaseDTO
+from .dto_protocol import ChargePointDTOProtocol  # type: ignore # Used for type checking
 from .evse_dto import EVSEDTO
-from .scheduling_intervals_dto import SchedulingIntervalsDTO
 
+@dataclass
 class LocationDTO(BaseDTO):
     """DTO representing location information for a charge point."""
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
+    id: str  # Required from BaseDTO
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
-class ChargePointDTO(BaseDTO):
-    """DTO representing a charge point in the system."""
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True, arbitrary_types_allowed=True)
-    id: str = Field(description="Unique identifier for the charge point")
-    name: str = Field(description="Display name of the charge point")
-    location: LocationDTO = Field(description="Geographic location information")
-    location_id: str = Field(description="ID of the location where installed")
-    postcode: Optional[str] = Field(None, description="Postal code of the location")
-    photo: Optional[str] = Field(None, description="URL to charge point photo")
-    last_updated: datetime = Field(description="Timestamp of last status update")
+@dataclass
+class ChargePointDTO(BaseDTO):  # type: ignore[type-arg] # Implements ChargePointDTOProtocol
+    """DTO representing a charge point in the system that implements ChargePointDTOProtocol."""
+    # Required fields from BaseDTO
+    id: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    # Required fields from ChargePointDTOProtocol
+    name: str = ""
+    location_id: str = ""
+    last_updated: datetime = field(default_factory=datetime.now)
+    status: str = ""
+    photo: Optional[str] = None
+    plug_and_charge: bool = False
+    smart_charging_enabled: bool = False
+    allowed_min_current_a: int = 0
+    allowed_max_current_a: int = 0
+    allowed_max_power_kw: str = "0"
+    max_current_a: int = 0
+    is_rebooting: bool = False
+    evses: List[EVSEDTO] = field(default_factory=lambda: list())
     
-    # Charging capabilities
-    plug_and_charge: bool = Field(False, description="Whether plug & charge is supported")
-    smart_charging_enabled: bool = Field(False, description="Whether smart charging is enabled")
-    allowed_min_current_a: int = Field(description="Minimum allowed current in amperes")
-    allowed_max_current_a: int = Field(description="Maximum allowed current in amperes")
-    allowed_solar_min_power_kw: Optional[float] = Field(None, description="Minimum solar power in kW")
-    allowed_max_power_kw: str = Field(description="Maximum allowed power in kW")
-    max_current_a: int = Field(description="Maximum current in amperes")
-    
-    # Operational status
-    status: str = Field(description="Current operational status")
-    is_rebooting: bool = Field(False, description="Whether charge point is rebooting")
-    
-    # Associated equipment and scheduling
-    scheduling_intervals: Optional[SchedulingIntervalsDTO] = Field(
-        default=None,
-        description="Charging schedule intervals"
-    )
-    evses: List[EVSEDTO] = Field(
-        default_factory=list[EVSEDTO],
-        description="List of EVSEs at this charge point"
-    )
+    # Additional fields not in protocol
+    postcode: Optional[str] = None
+    allowed_solar_min_power_kw: Optional[float] = None
+    location: Optional[LocationDTO] = None

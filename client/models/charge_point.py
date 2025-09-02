@@ -5,13 +5,13 @@ ChargePoint model that encapsulates charge point business logic.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
+from typing import List, cast
 
 from ..dtos.charge_point_dto import ChargePointDTO
 from .base_model import BaseModel, BusinessRuleError
 from .connector import Connector
 from .evse import EVSE
-from .protocols import ChargePointDTOProtocol
+from ..dtos.dto_protocol import ChargePointDTOProtocol
 
 class ChargePoint(BaseModel[ChargePointDTOProtocol]):
     """Model representing a charging point with its business logic.
@@ -19,7 +19,9 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
     This model encapsulates the ChargePointDTO and provides business-relevant
     properties and methods while enforcing business rules.
     """
-    
+
+    _dto: ChargePointDTOProtocol  # Type hint for the DTO
+
     def __init__(self, dto: ChargePointDTO) -> None:
         """Initialize a new charge point.
         
@@ -29,7 +31,7 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
         Raises:
             ValidationError: If the DTO is invalid
         """
-        super().__init__(dto)
+        super().__init__(cast(ChargePointDTOProtocol, dto))
         self._evses = [EVSE(evse) for evse in dto.evses or []]
     
     @property

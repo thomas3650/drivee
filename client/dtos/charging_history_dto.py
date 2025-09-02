@@ -1,38 +1,51 @@
 """DTOs for charging history data transfer."""
-from typing import List, Any
-from pydantic import Field
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import List, Optional
 
 from .base_dto import BaseDTO
 from .charging_session_dto import ChargingSessionDTO
 
-class ChargingHistoryEntryDTO(BaseDTO):
+@dataclass
+class ChargingHistoryEntryDTO(BaseDTO):  # type: ignore[type-arg]
     """DTO representing a single charging history entry.
     
     This DTO contains the details of a single charging session with its
     associated metadata like notes and location.
     """
-    session: ChargingSessionDTO = Field(description="The charging session details")
-    note: str = Field(description="User or system note about the session")
-    type: str = Field(description="Type of charging session")
-    address: str = Field(description="Location address where charging occurred")
+    # Required fields from BaseDTO
+    id: str
+    
+    # Optional fields from BaseDTO
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-    id: str = Field(
-        description="The session ID",
-        default=""
-    )
+    # Entry fields
+    session: Optional[ChargingSessionDTO] = None  # The charging session details
+    note: str = ""  # User or system note about the session
+    type: str = ""  # Type of charging session
+    address: str = ""  # Location address where charging occurred
 
-    def model_post_init(self, __context: Any) -> None:
-        """Set the ID after initialization."""
-        super().model_post_init(__context)
-        self.id = self.session.id
+    def __post_init__(self) -> None:
+        """Set the ID after initialization if not provided."""
+        if self.session and not self.id:
+            self.id = self.session.id
 
-class ChargingHistoryDTO(BaseDTO):
+@dataclass
+class ChargingHistoryDTO(BaseDTO):  # type: ignore[type-arg]
     """DTO representing a collection of charging history entries.
     
     This DTO contains a list of charging sessions with their associated
     metadata, sorted by date.
     """
-    sessions: List[ChargingHistoryEntryDTO] = Field(
-        alias='session_history',
-        description="List of charging history entries"
-    )
+    # Required fields from BaseDTO
+    id: str
+    
+    # Optional fields from BaseDTO
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    # Collection fields
+    sessions: List[ChargingHistoryEntryDTO] = field(default_factory=lambda: list())

@@ -1,36 +1,37 @@
 """Base DTO class that all other DTOs inherit from."""
+from __future__ import annotations
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from .dto_protocol import DTOProtocol
 
-class BaseDTO(BaseModel):
+@dataclass
+class BaseDTO(DTOProtocol):  # Make protocol implementation explicit
     """Base class for all DTOs.
     
     This class provides common functionality for all DTOs including:
-    - JSON serialization/deserialization
-    - Camel case field name conversion for API compatibility
-    - Strict data validation
-    - Extra field handling
+    - JSON serialization/deserialization via dataclasses
+    - Simple data structure with type hints
+    - DTOProtocol implementation
     
     DTOs should:
     - Only contain data, no business logic
     - Match API response structures exactly
-    - Use proper field typing and validation
+    - Use proper type hints
     - End with 'DTO' suffix in class name
     """
-    id: str = Field(description="Unique identifier")
-    created_at: Optional[datetime] = Field(
-        default=None,
-        description="When this entity was created"
-    )
-    updated_at: Optional[datetime] = Field(
-        default=None,
-        description="When this entity was last updated"
-    )
-
-    model_config = ConfigDict(
-        alias_generator=lambda s: ''.join(word.capitalize() if i else word for i, word in enumerate(s.split('_'))),
-        populate_by_name=True,
-        extra='ignore'  # Ignore extra fields from API
-    )
+    id: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    def dict(self, **kwargs: Any) -> Dict[str, Any]:  # noqa: A003
+        """Convert the DTO to a dictionary using dataclasses.asdict.
+        
+        Args:
+            **kwargs: Additional arguments for compatibility
+            
+        Returns:
+            Dict representation of the DTO
+        """
+        return asdict(self)

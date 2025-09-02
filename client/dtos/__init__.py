@@ -13,12 +13,26 @@ from .charging_responses_dto import StartChargingResponseDTO, EndChargingRespons
 from .charging_session_dto import ChargingSessionDTO
 from .connector_dto import ConnectorDTO
 from .currency_dto import CurrencyDTO
+from .dto_protocol import (
+    DTOProtocol,
+    ChargePointDTOProtocol,
+    EVSEDTOProtocol,
+    ConnectorDTOProtocol,
+    ChargingSessionDTOProtocol,
+    ChargingPeriodDTOProtocol,
+)
 from .evse_dto import EVSEDTO
 from .payment_details_dto import PaymentDetailsDTO
-from .scheduling_intervals_dto import SchedulingIntervalsDTO
-from .smart_charging_dto import SmartChargingDTO
 
 __all__ = [
+    # Protocols
+    'DTOProtocol',
+    'ChargePointDTOProtocol',
+    'EVSEDTOProtocol',
+    'ConnectorDTOProtocol',
+    'ChargingSessionDTOProtocol',
+    'ChargingPeriodDTOProtocol',
+    
     # Base classes
     'BaseDTO',
     
@@ -37,11 +51,7 @@ __all__ = [
     # Payment related
     'CurrencyDTO',
     'PaymentDetailsDTO',
-    
-    # Smart charging related
-    'SmartChargingDTO',
-    'SchedulingIntervalsDTO',
-    
+        
     # API responses
     'StartChargingResponseDTO',
     'EndChargingResponseDTO',

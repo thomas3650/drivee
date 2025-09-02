@@ -3,37 +3,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, Generic, Optional, Protocol, TypeVar, runtime_checkable
+from typing import Generic, Optional, TypeVar
 
-@runtime_checkable
-class DTOProtocol(Protocol):
-    """Protocol defining the interface that all DTOs must implement."""
-    id: str
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
-    
-    def dict(self, *,  # noqa: A003
-            include: Optional[Any] = None,
-            exclude: Optional[Any] = None,
-            by_alias: bool = False,
-            exclude_unset: bool = False,
-            exclude_defaults: bool = False,
-            exclude_none: bool = False,
-            **kwargs: Any) -> Dict[str, Any]:
-        """Convert the DTO to a dictionary."""
-        ...
-        
-    def model_dump(self, *,
-                mode: str = 'python',
-                include: Optional[Any] = None,
-                exclude: Optional[Any] = None,
-                by_alias: bool = False,
-                exclude_unset: bool = False,
-                exclude_defaults: bool = False,
-                exclude_none: bool = False,
-                **kwargs: Any) -> Dict[str, Any]:
-        """Dump the model to a dictionary."""
-        ...
+from ..dtos.dto_protocol import DTOProtocol
 
 # Type variable for our model's DTO type
 D = TypeVar('D', bound=DTOProtocol, covariant=True)
@@ -91,18 +63,7 @@ class BaseModel(Generic[D], ABC):
     def updated_at(self) -> Optional[datetime]:
         """Get when this entity was last updated."""
         return self._dto.updated_at
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the model to a dictionary representation.
-        
-        This method should be used when exposing the model data externally.
-        It uses the underlying DTO's serialization but may add or transform
-        fields based on business logic.
-        
-        Returns:
-            Dict[str, Any]: Dictionary representation of the model
-        """
-        return self._dto.model_dump()
+
     
     @abstractmethod
     def validate_business_rules(self) -> None:

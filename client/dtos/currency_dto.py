@@ -1,52 +1,49 @@
 """DTO for currency data transfer."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
-from pydantic import Field, field_validator
 
 from .base_dto import BaseDTO
 
-class CurrencyDTO(BaseDTO):
+@dataclass
+class CurrencyDTO(BaseDTO):  # type: ignore[type-arg]
     """DTO representing currency configuration.
     
     Contains currency formatting and display information used for
     showing prices and amounts in the UI.
     """
-    code: str = Field(
-        max_length=3,
-        min_length=3,
-        description="ISO 4217 currency code (e.g., 'USD')"
-    )
-    name: str = Field(description="Full currency name")
+    # Required fields from BaseDTO
+    id: str
+    
+    # Optional fields from BaseDTO
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    # Currency fields
+    code: str = ""  # ISO 4217 currency code (e.g., 'USD')
+    name: str = ""  # Full currency name
     
     # Display formatting
-    symbol: str = Field(description="Currency symbol (e.g., '$')")
-    sign: str = Field(description="Currency sign")
-    formatter: str = Field(description="Format string for amounts")
-    unit_price_formatter: str = Field(
-        alias='unitPriceFormatter',
-        description="Format string for unit prices"
-    )
+    symbol: str = ""  # Currency symbol (e.g., '$')
+    sign: str = ""  # Currency sign
+    formatter: str = ""  # Format string for amounts
+    unit_price_formatter: str = ""  # Format string for unit prices
     
     # Position configuration
-    has_prefix: bool = Field(
-        description="Whether symbol goes before amount"
-    )
-    prefix: Optional[str] = Field(
-        None,
-        description="Text to show before amount"
-    )
-    has_suffix: bool = Field(
-        description="Whether symbol goes after amount"
-    )
-    suffix: str = Field(description="Text to show after amount")
+    has_prefix: bool = False  # Whether symbol goes before amount
+    prefix: Optional[str] = None  # Text to show before amount
+    has_suffix: bool = False  # Whether symbol goes after amount
+    suffix: str = ""  # Text to show after amount
     
     # Technical details
-    minor_unit_decimal: int = Field(
-        ge=0,
-        le=6,
-        description="Number of decimal places"
-    )
+    minor_unit_decimal: int = 2  # Number of decimal places (0-6)
     
-    @field_validator('code')
+    def __post_init__(self) -> None:
+        """Validate currency code is exactly 3 characters."""
+        if len(self.code) != 0 and len(self.code) != 3:
+            raise ValueError("Currency code must be exactly 3 characters")
     @classmethod
     def validate_currency_code(cls, v: str) -> str:
         """Validate currency code is 3 uppercase letters.

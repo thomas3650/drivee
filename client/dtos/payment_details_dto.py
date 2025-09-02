@@ -1,33 +1,30 @@
 """DTO for payment details data transfer."""
-from typing import Literal
-from pydantic import Field
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal, Optional
 
 from .base_dto import BaseDTO
 
-CardNetworkType = Literal["visa", "mastercard", "amex", "discover", "other"]
-CardType = Literal["credit", "debit", "prepaid", "other"]
-PaymentMethodType = Literal["card", "bank", "wallet", "other"]
-
-class PaymentDetailsDTO(BaseDTO):
+@dataclass
+class PaymentDetailsDTO(BaseDTO):  # type: ignore[type-arg]
     """DTO representing payment method details.
     
     Contains information about the payment method used for a transaction,
     including card details and payment method type.
     """
-    card_network: CardNetworkType = Field(
-        alias='cardNetwork',
-        description="Card network (e.g., Visa)"
-    )
-    card_type: CardType = Field(
-        description="Type of card (e.g., credit)"
-    )
-    method_id: str = Field(
-        alias='methodId',
-        description="Unique payment method identifier"
-    )
-    method_type: PaymentMethodType = Field(
-        alias='methodType',
-        description="Type of payment method"
-    )
-    name: str = Field(description="Display name of payment method")
-    type: str = Field(description="Specific type identifier")
+    # Required fields from BaseDTO
+    id: str
+    
+    # Optional fields from BaseDTO
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    # Payment method fields
+    card_network: Literal["visa", "mastercard", "amex", "discover", "other"] = "other"
+    card_type: Literal["credit", "debit", "prepaid", "other"] = "other"
+    method_id: str = ""
+    method_type: Literal["card", "bank", "wallet", "other"] = "other"
+    name: str = ""  # Display name of payment method
+    type: str = ""  # Specific type identifier

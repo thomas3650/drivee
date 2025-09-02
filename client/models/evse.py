@@ -8,7 +8,7 @@ from typing import List, cast
 from ..dtos.evse_dto import EVSEDTO
 from .base_model import BaseModel, BusinessRuleError
 from .connector import Connector
-from .protocols import EVSEDTOProtocol
+from ..dtos.dto_protocol import EVSEDTOProtocol
 from .types import EVSEStatus
 
 class EVSE(BaseModel[EVSEDTOProtocol]):

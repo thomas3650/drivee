@@ -1,11 +1,27 @@
-"""Type protocols for DTOs."""
+"""Protocols defining the interfaces that DTOs must implement."""
 from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
-from .base_model import DTOProtocol
+@runtime_checkable
+class DTOProtocol(Protocol):
+    """Protocol defining the interface that all DTOs must implement."""
+    id: str
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    
+    def dict(self, *,  # noqa: A003
+            include: Optional[Any] = None,
+            exclude: Optional[Any] = None,
+            by_alias: bool = False,
+            exclude_unset: bool = False,
+            exclude_defaults: bool = False,
+            exclude_none: bool = False,
+            **kwargs: Any) -> Dict[str, Any]:
+        """Convert the DTO to a dictionary."""
+        ...
 
 @runtime_checkable
 class ChargePointDTOProtocol(DTOProtocol, Protocol):
@@ -67,3 +83,13 @@ class ChargingPeriodDTOProtocol(DTOProtocol, Protocol):
     end_time: Optional[datetime]
     energy_kwh: float
     cost: float
+
+# Re-export all protocols for type checking
+__all__ = [
+    'DTOProtocol',
+    'ChargePointDTOProtocol',
+    'EVSEDTOProtocol',
+    'ConnectorDTOProtocol',
+    'ChargingSessionDTOProtocol',
+    'ChargingPeriodDTOProtocol',
+]

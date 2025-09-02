@@ -1,42 +1,31 @@
 """DTO for EVSE (Electric Vehicle Supply Equipment) data transfer."""
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import List, Optional
-from pydantic import Field
 
 from .base_dto import BaseDTO
 from .connector_dto import ConnectorDTO
-from .charging_session_dto import ChargingSessionDTO
+from .dto_protocol import EVSEDTOProtocol  # type: ignore # Used for type checking
 
-class EVSEDTO(BaseDTO):
-    """DTO representing an EVSE in the system.
+@dataclass
+class EVSEDTO(BaseDTO):  # type: ignore[type-arg] # Implements EVSEDTOProtocol
+    """DTO representing an EVSE that implements EVSEDTOProtocol.
     
     An EVSE is a physical charging station unit that may have multiple connectors.
     This DTO represents the pure data structure without any business logic.
     """
-    
-    # Core identifiers
-    id: str = Field(description="Unique identifier for the EVSE")
-    identifier: str = Field(description="External/visible identifier")
-    status: str = Field(description="Current operational status")
-    connectors: List[ConnectorDTO] = Field(default_factory=list[ConnectorDTO], description="List of connectors on this EVSE")
+    # Required fields from BaseDTO
+    id: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
-    # Status and capabilities
-    status: str = Field(description="Current operational status")
-    max_power: int = Field(
-        alias='maxPower',
-        description="Maximum power output in watts"
-    )
-    current_type: str = Field(
-        alias='currentType',
-        description="Type of current (AC/DC)"
-    )
+    # Required fields from EVSEDTOProtocol
+    status: str = ""
+    connectors: List[ConnectorDTO] = field(default_factory=lambda: list())
     
-    # Associated equipment and sessions
-    connectors: List[ConnectorDTO] = Field(
-        description="List of connectors on this EVSE"
-    )
-    session: Optional[ChargingSessionDTO] = Field(
-        None,
-        description="Current charging session, if any"
-    )
+    # Additional fields
+    identifier: str = ""
+    max_power: int = 0
+    current_type: str = "AC"

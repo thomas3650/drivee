@@ -7,7 +7,7 @@ from typing import cast
 
 from ..dtos.connector_dto import ConnectorDTO
 from .base_model import BaseModel, BusinessRuleError
-from .protocols import ConnectorDTOProtocol
+from ..dtos.dto_protocol import ConnectorDTOProtocol
 from .types import ConnectorStatus
 
 class Connector(BaseModel[ConnectorDTOProtocol]):
