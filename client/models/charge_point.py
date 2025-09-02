@@ -92,3 +92,34 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
             
         if not self.name:
             raise BusinessRuleError("Name must not be empty")
+    
+    @classmethod
+    def from_dtos(cls, charge_points: List[ChargePointDTO]) -> "ChargePoint":
+        """Create a ChargePoint from a list of DTOs.
+        
+        Business Rules:
+        - Must have exactly one charge point
+        - The charge point must be valid
+        
+        Args:
+            charge_points: List of charge point DTOs
+            
+        Returns:
+            ChargePoint: A validated charge point instance
+            
+        Raises:
+            BusinessRuleError: If no charge points or multiple charge points are found
+        """
+        if not charge_points:
+            raise BusinessRuleError("No charge points found")
+            
+        if len(charge_points) > 1:
+            raise BusinessRuleError(
+                f"Multiple charge points found ({len(charge_points)}), expected exactly one"
+            )
+            
+        # Create and validate instance
+        instance = cls(charge_points[0])
+        instance.validate_business_rules()
+        
+        return instance

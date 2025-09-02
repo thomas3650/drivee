@@ -4,12 +4,47 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Dict, List, Any, TypedDict, Optional, cast
 
 from dotenv import load_dotenv
 import logging
 
 from client.drivee_client import DriveeClient, DEFAULT_HISTORY_DAYS
-from client.dtos import ChargePoint
+from client.dtos.charging_session_dto import ChargingSessionDTO
+from client.models import ChargePoint, ChargingSession
+from client.models.base_model import BusinessRuleError
+
+RawSessionData = Dict[str, Any]
+
+class ChargingSessionData(TypedDict, total=False):
+    """Type definition for charging session data from API."""
+    id: str
+    evse_id: str
+    started_at: str
+    stopped_at: Optional[str]
+    duration: int
+    free_energy_wh: int
+    non_billable_energy: int
+    amount: str
+    total_amount: str
+    amount_due: str
+    payment_status: str
+    charging_state: str
+    currency_id: int
+    
+def safe_get_str(data: RawSessionData, key: str, default: str = "") -> str:
+    """Safely get string value from raw data."""
+    val = data.get(key, default)
+    return str(val) if val is not None else default
+
+def safe_get_int(data: RawSessionData, key: str, default: int = 0) -> int:
+    """Safely get integer value from raw data."""
+    try:
+        val = data.get(key, default)
+        return int(val) if val is not None else default
+    except (ValueError, TypeError):
+        return default
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -42,28 +77,21 @@ def format_duration(seconds: int) -> str:
 def display_charge_point_info(charge_point: ChargePoint) -> None:
     """Display information about a charge point."""
     logger.info(f"\nCharge Point: {charge_point.name}")
-    logger.info(f"Status: {charge_point.status}")
-    logger.info(f"Max Power: {charge_point.allowed_max_power_kw}kW")
-    logger.info(f"Smart Charging: {'Enabled' if charge_point.scheduling_intervals.off_peak_is_set else 'Disabled'}")
+    logger.info(f"Location: {charge_point.location_id}")
+    logger.info(f"Last Updated: {charge_point.last_updated}")
     
-    if charge_point.evse:
-        evse = charge_point.evse
-        logger.info(f"\n  EVSE {evse.id}:")
-        logger.info(f"  Status: {evse.status}")
-        logger.info(f"  Max Power: {evse.max_power/1000:.1f}kW")
-        logger.info(f"  Current Type: {evse.current_type}")
-        
-        for connector in evse.connectors:
-            logger.info(f"    Connector {connector.name}: {connector.status}")
+    evses = charge_point.evses
+    if evses:
+        for evse in evses:
+            logger.info(f"\n  EVSE {evse.id}:")
+            logger.info(f"  Status: {evse.status}")
             
-        if evse.session:
-            session = evse.session
-            logger.info(f"    Active Session:")
-            logger.info(f"      Started: {session.started_at}")
-            logger.info(f"      Duration: {format_duration(session.duration)}")
-            logger.info(f"      Energy: {session.energy/1000:.1f}kWh")
-            logger.info(f"      Power: {session.power/1000:.1f}kW")
-            logger.info(f"      Cost: {session.amount} {session.currency.symbol}")
+            for connector in evse.connectors:
+                logger.info(
+                    f"    Connector {connector.type}: "
+                    f"Status={connector.status}, "
+                    f"Max Power={connector.max_power}kW"
+                )
 
 async def display_charging_history(client: DriveeClient, days: int = DEFAULT_HISTORY_DAYS) -> None:
     """
@@ -72,47 +100,67 @@ async def display_charging_history(client: DriveeClient, days: int = DEFAULT_HIS
     Args:
         client: The Drivee client instance
         days: Number of days of history to fetch
+        
+    Raises:
+        BusinessRuleError: If the charging session data violates business rules
     """
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     
-    logger.info(f"\nFetching charging history for the last {days} days...")
-    history = await client.get_charging_history(start_date, end_date)
+    try:
+        logger.info(f"\nFetching charging history for the last {days} days...")
+        
+        # Get charging history data from API
+        sessions = await client.get_charging_history(start_date, end_date)
+                    
+        # Calculate totals using model properties
+        total_energy = sum((s.free_energy_wh + s.non_billable_energy) for s in sessions)
+        total_duration = sum(s.duration for s in sessions)
+        total_cost = sum(s.total_amount for s in sessions)
+        
+        # Display summary header
+        logger.info("\nCharging History Summary")
+        logger.info("=" * 50)
+        logger.info(f"Period: {start_date} to {end_date}")
+        logger.info(f"Total Sessions: {len(sessions)}")
+        logger.info("-" * 50)
+        
+        # Display individual sessions with model properties
+        for session in sessions:
+            logger.info("\nSession Details:")
+            logger.info(f"  Started: {session.started_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            if session.stopped_at:
+                logger.info(f"  Ended: {session.stopped_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info(f"  Duration: {format_duration(session.duration)}")
+            logger.info(f"  Energy Used: {(session.free_energy_wh + session.non_billable_energy)/1000:.2f}kWh")
+            
+            # Cost information with currency
+            logger.info(f"  Cost: {session.total_amount:.2f} (Currency: {session.currency_id})")
+            if session.amount_due > 0:
+                logger.info(f"  Amount Due: {session.amount_due:.2f}")
+                
+            # Status information
+            logger.info(f"  Payment Status: {session.payment_status}")
+            logger.info(f"  Charging State: {session.charging_state}")
+            
+        # Display final summary
+        logger.info("\nPeriod Summary")
+        logger.info("=" * 50)
+        logger.info(f"Total Duration: {format_duration(total_duration)}")
+        logger.info(f"Total Energy: {total_energy/1000:.2f}kWh")
+        logger.info(f"Total Cost: {total_cost:.2f}")
+        logger.info("=" * 50)
     
-    # Calculate 30-day totals
-    total_energy = 0
-    total_cost = 0
-    total_duration = 0
-    total_charging_time = 0
-    total_charging_energy = 0
-    
-    logger.info("\nCharging History Summary:")
-    logger.info(f"Period: {start_date} to {end_date}")
-    
-    for entry in history.sessions:
-        session = entry.session
-        total_energy += session.energy
-        total_cost += float(session.amount)
-        total_duration += session.duration
-        
-        # Calculate charging periods
-        charging_periods = [p for p in session.charging_periods if p.state.startswith('charging')]
-        total_charging_time += sum(p.duration_in_seconds for p in charging_periods)
-        total_charging_energy += sum(float(p.amount) for p in charging_periods)
-        
-        logger.info(f"\nSession {session.id}:")
-        logger.info(f"Date: {session.started_at}")
-        logger.info(f"Duration: {format_duration(session.duration)}")
-        logger.info(f"Energy Used: {session.energy/1000:.1f}kWh")
-        logger.info(f"Cost: {session.amount} {session.currency.symbol}")
-        
-        
-        # Show power stats if available
-        if session.power_stats:
-            logger.info("\nPower Statistics:")
-            logger.info(f"Average Power: {session.power_stats.get('averageKw', 0):.1f}kW")
-            logger.info(f"Max Power: {session.power_stats.get('maxKw', 0):.1f}kW")
-            logger.info("\nPower Graph:")
+    except BusinessRuleError as e:
+        logger.error(f"Business rule violation: {e}")
+        return
+    except Exception as e:
+        logger.error(f"Unexpected error during history processing: {e}")
+        return
+    logger.info("\nPeriod Summary:")
+    logger.info(f"Total Energy: {total_energy/1000:.1f}kWh")
+    logger.info(f"Total Cost: {total_cost:.2f}")
+    logger.info(f"Total Duration: {format_duration(total_duration)}")
     
 
 async def display_charge_points(client: DriveeClient) -> None:

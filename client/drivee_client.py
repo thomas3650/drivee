@@ -294,20 +294,16 @@ class DriveeClient:
         try:
             data = await self._make_request("GET", "app/personal/charge-points")
             
-            if not data.get("data") or not data["data"]:
-                error_msg = "No charge points found in API response"
-                _LOGGER.error(error_msg)
-                raise ValueError(error_msg)
+            charge_points_data = data.get("data", [])
+            charge_points = [
+                ChargePointDTO(**point_data)
+                for point_data in charge_points_data
+            ]
+            _LOGGER.info("Retrieved %d charge points", len(charge_points))
             
-            if len(data["data"]) > 1:
-                error_msg = f"Multiple charge points found ({len(data['data'])}), expected exactly one"
-                _LOGGER.error(error_msg)
-                raise ValueError(error_msg)
-                
-            _LOGGER.info("Retrieved charge point")
-            charge_point_dto = ChargePointDTO(**data["data"][0])
-            charge_point = ChargePoint(charge_point_dto)
-            _LOGGER.info("Charge point status: %s", charge_point_dto.status)
+            # Let the model handle validation of single charge point requirement
+            charge_point = ChargePoint.from_dtos(charge_points)
+            _LOGGER.info("Using charge point: %s", charge_point.name)
             return charge_point
         except Exception as e:
             _LOGGER.exception("Error fetching charge point: %s", str(e))
