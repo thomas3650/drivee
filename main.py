@@ -45,7 +45,7 @@ def safe_get_int(data: RawSessionData, key: str, default: int = 0) -> int:
         return default
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 def get_credentials() -> tuple[str, str]:

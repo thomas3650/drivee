@@ -41,7 +41,7 @@ class ChargePoint(BaseModel[ChargePointDTOProtocol]):
         return self._dto.name
     
     @property
-    def location_id(self) -> str:
+    def location_id(self) -> str | None:
         """Get the location ID where this charge point is installed."""
         return self._dto.location_id
     

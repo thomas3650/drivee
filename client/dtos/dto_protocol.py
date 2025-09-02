@@ -27,18 +27,18 @@ class DTOProtocol(Protocol):
 class ChargePointDTOProtocol(DTOProtocol, Protocol):
     """Protocol defining the interface that ChargePointDTO must implement."""
     name: str
-    location_id: str
+    location_id: Optional[str]  # Back to snake_case to match API
     last_updated: datetime
     evse: EVSEDTOProtocol
     status: str
     photo: Optional[str]
-    plug_and_charge: bool
-    smart_charging_enabled: bool
-    allowed_min_current_a: int
-    allowed_max_current_a: int
-    allowed_max_power_kw: str
-    max_current_a: int
-    is_rebooting: bool
+    plug_and_charge: bool  # Back to snake_case to match API
+    smart_charging_enabled: bool  # Back to snake_case to match API
+    allowed_min_current_a: int  # Back to snake_case to match API
+    allowed_max_current_a: int  # Back to snake_case to match API
+    allowed_max_power_kw: str  # Back to snake_case to match API
+    max_current_a: int  # Back to snake_case to match API
+    is_rebooting: bool  # Back to snake_case to match API
 
 @runtime_checkable
 class EVSEDTOProtocol(DTOProtocol, Protocol):

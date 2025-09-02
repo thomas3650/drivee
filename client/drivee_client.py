@@ -287,6 +287,8 @@ class DriveeClient:
             data = await self._make_request("GET", "app/personal/charge-points")
             
             charge_points_data = data.get("data", [])
+            _LOGGER.debug("Raw charge point data: %s", charge_points_data)  # Log raw data for debugging
+            
             charge_points = [
                 ChargePointDTO(**point_data)
                 for point_data in charge_points_data
