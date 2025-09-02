@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union, Dict, Type, Final
+from typing import Any, Optional, Union, Dict, Type, Final, List
 from aiohttp import ClientSession, ClientTimeout
 from tenacity import (
     retry,
@@ -14,10 +14,14 @@ from tenacity import (
 )
 
 from .dtos import (
+    ChargePointDTO,
+    ChargingSessionDTO,
+    StartChargingResponseDTO,
+    EndChargingResponseDTO,
+)
+from .models import (
     ChargePoint,
-    ChargingHistory,
-    StartChargingResponse,
-    EndChargingResponse,
+    ChargingSession,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -172,17 +176,22 @@ class DriveeClient:
         _LOGGER.info("Refreshing Drivee client state")
         try:
             charge_point = await self.get_charge_point()
-            if not charge_point:
-                raise Exception("No charge points available")
 
             _LOGGER.info("Retrieved charge point: %s", charge_point.name)
-            if not charge_point.evse:
+            evses = charge_point.evses
+            if not evses:
                 raise Exception("No EVSE found")
-            self.evse_id = charge_point.evse.id
+                
+            self.evse_id = evses[0].id
             _LOGGER.info("Set EVSE ID to: %s", self.evse_id)
             
-            if charge_point.evse.session:
-                self.session_id = charge_point.evse.session.id
+            # Get current session if any by checking EVSE status
+            active_evses = [
+                evse for evse in evses 
+                if evse.status == "charging"
+            ]
+            if active_evses:
+                self.session_id = active_evses[0].id
                 _LOGGER.info("Set session ID to: %s", self.session_id)
             else:
                 self.session_id = None
@@ -271,28 +280,34 @@ class DriveeClient:
             _LOGGER.exception("Error making request: %s", str(e))
             raise
 
-    async def get_charge_point(self) -> Optional[ChargePoint]:
-        """Get the first charge point.
+    async def get_charge_point(self) -> ChargePoint:
+        """Get the charge point.
         
         Returns:
-            The first charge point or None if no charge points are available.
+            The charge point if exactly one is available.
             
         Raises:
-            Exception: If there is an error fetching the charge point data.
+            ValueError: If no charge points are available or if multiple charge points are found
+            Exception: If there is an error fetching the charge point data
         """
         _LOGGER.info("Fetching charge point")
         try:
             data = await self._make_request("GET", "app/personal/charge-points")
             
             if not data.get("data") or not data["data"]:
-                _LOGGER.warning("No charge points found in API response")
-                return None
+                error_msg = "No charge points found in API response"
+                _LOGGER.error(error_msg)
+                raise ValueError(error_msg)
+            
+            if len(data["data"]) > 1:
+                error_msg = f"Multiple charge points found ({len(data['data'])}), expected exactly one"
+                _LOGGER.error(error_msg)
+                raise ValueError(error_msg)
                 
-            _LOGGER.info("Retrieved %d charge points, using first one", len(data["data"]))
-            charge_point = ChargePoint.model_validate(data["data"][0])
-            _LOGGER.info("Charge point status: %s, EVSE status: %s", 
-                         charge_point.status, 
-                         getattr(charge_point.evse, "status", "unknown"))
+            _LOGGER.info("Retrieved charge point")
+            charge_point_dto = ChargePointDTO(**data["data"][0])
+            charge_point = ChargePoint(charge_point_dto)
+            _LOGGER.info("Charge point status: %s", charge_point_dto.status)
             return charge_point
         except Exception as e:
             _LOGGER.exception("Error fetching charge point: %s", str(e))
@@ -302,12 +317,15 @@ class DriveeClient:
         self,
         start_date: Optional[Union[str, datetime]] = None,
         end_date: Optional[Union[str, datetime]] = None,
-    ) -> ChargingHistory:
+    ) -> List[ChargingSession]:
         """Get charging history for a date range.
         
         Args:
             start_date: Start date as datetime object or string in YYYY-MM-DD format
             end_date: End date as datetime object or string in YYYY-MM-DD format
+            
+        Returns:
+            List of charging sessions in the date range
         """
         _LOGGER.info("Fetching charging history from %s to %s", start_date, end_date)
         if not start_date:
@@ -324,22 +342,30 @@ class DriveeClient:
         _LOGGER.debug("Formatted date range: %s to %s", start_date, end_date)
         try:
             params = {
-            "start_date": start_date,
-            "end_date": end_date
+                "start_date": start_date,
+                "end_date": end_date
             }
             data = await self._make_request("GET", "app/profile/session_history", params=params)
-            history = ChargingHistory.model_validate(data)
-            _LOGGER.debug("Retrieved %d charging history entries", len(history.sessions))
-            return history
+            # Create the history entries first
+            history_entries = [
+                ChargingSessionDTO(**entry) for entry in data.get("sessions", [])
+            ]
+            # Then create sessions from those entries
+            sessions = [ChargingSession(entry) for entry in history_entries]
+            _LOGGER.debug("Retrieved %d charging history entries", len(sessions))
+            return sessions
         except Exception as e:
             _LOGGER.exception("Error fetching charging history: %s", str(e))
             raise
 
-    async def end_charging(self) -> EndChargingResponse:
+    async def end_charging(self) -> ChargingSession:
         """End charging for a specific session.
         
         Returns:
-            The API response containing the session details
+            The session that was ended
+            
+        Raises:
+            ValueError: If there is no active session or response data is invalid
         """
         _LOGGER.info("Ending charging session: %s", self.session_id)
         if not self.session_id:
@@ -351,15 +377,19 @@ class DriveeClient:
             data = await self._make_request("POST", f"app/session/{self.session_id}/end")
             _LOGGER.info("Successfully ended charging session")
             self.session_id = None
-            response = EndChargingResponse.model_validate(data)
-            _LOGGER.info("End charging response: Session ID %s, status %s", 
-                         response.session.id, response.session.status)
-            return response
+            
+            response_dto = EndChargingResponseDTO(**data)
+            if not response_dto.session:
+                raise ValueError("No session data in end charging response")
+            
+            session = ChargingSession(response_dto.session)
+            _LOGGER.info("End charging response: Session ID %s", session.id)
+            return session
         except Exception as e:
             _LOGGER.exception("Error ending charging: %s", str(e))
             raise
 
-    async def start_charging(self) -> StartChargingResponse:
+    async def start_charging(self) -> ChargingSession:
         """Start charging on a specific EVSE."""
         _LOGGER.info("Starting charging on EVSE: %s", self.evse_id)
         if not self.evse_id:
@@ -373,12 +403,15 @@ class DriveeClient:
                 "app/session/start",
                 json={"evseId": self.evse_id}
             )
-            response = StartChargingResponse.model_validate(data)
-            self.session_id = response.session.id
+            response_dto = StartChargingResponseDTO(**data)
+            if not response_dto.session:
+                raise ValueError("No session data in start charging response")
+                
+            session = ChargingSession(response_dto.session)
+            self.session_id = session.id
             _LOGGER.info("Successfully started charging, new session ID: %s", self.session_id)
-            _LOGGER.info("Start charging response: Session ID %s, status %s", 
-                         response.session.id, response.session.status)
-            return response
+            _LOGGER.info("Start charging response: Session ID %s", session.id)
+            return session
         except Exception as e:
             _LOGGER.exception("Error starting charging: %s", str(e))
             raise
