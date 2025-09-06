@@ -1,0 +1,5 @@
+# Requirements for Home Assistant Drivee custom integration
+# Core Home Assistant dependencies are managed by HA itself
+# This file lists only direct Python dependencies for this integration
+
+driveeClient @ git+https://github.com/thomas3650/driveeClient.git
