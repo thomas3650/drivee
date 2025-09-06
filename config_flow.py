@@ -13,7 +13,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 from .const import DOMAIN, DEFAULT_DEVICE_ID, DEFAULT_APP_VERSION
-from .client.drivee_client import DriveeClient
+from drivee_client.drivee_client import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 

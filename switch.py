@@ -1,4 +1,5 @@
 """Support for Drivee charging switches."""
+
 from __future__ import annotations
 
 import logging
@@ -9,12 +10,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-)
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, STATE_CHARGING, STATE_PENDING, STATE_SUSPENDED
+from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
+from .drivee_client.errors import DriveeError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,51 +28,54 @@ async def async_setup_entry(
 
 
 class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
-    """Representation of a Drivee charging switch."""
+    """Representation of a Drivee charging switch.
 
-    def __init__(
-        self, coordinator: DriveeDataUpdateCoordinator
-    ) -> None:
+    Note: Pylance may report a type conflict for 'available' due to multiple inheritance
+    (Entity uses cached_property, CoordinatorEntity uses property). This is a known
+    Home Assistant quirk and can be safely ignored unless you override 'available'.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "charging"
+    _attr_entity_category = (
+        EntityCategory.CONFIG
+    )  # Set to CONFIG or None as appropriate
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the switch."""
         super().__init__(coordinator)
-        self._attr_name = "drivee_charging"
-        self._attr_unique_id = "drivee_charging"
-        self._attr_icon = "mdi:power-standby"
-
+        entry_id = getattr(getattr(coordinator, "config_entry", None), "entry_id", None)
+        self._attr_unique_id = f"{entry_id}_charging" if entry_id else None
+        self._attr_icon = "mdi:ev-station"
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """Return true if charging is active."""
-        if not self.coordinator.data or not self.coordinator.data.charge_point:
+        data = self.coordinator.data
+        charge_point = data.get("charge_point")
+        if not charge_point or not hasattr(charge_point, "evse"):
             return False
-        
-        if hasattr(self.coordinator.data.charge_point.evse, "status"):
-            return (self.coordinator.data.charge_point.evse.status == STATE_CHARGING or 
-                    self.coordinator.data.charge_point.evse.status == STATE_PENDING or
-                    self.coordinator.data.charge_point.evse.status == STATE_SUSPENDED)
-        
-        return False
+        return getattr(charge_point.evse, "is_charging", False)
 
     @property
-    def icon(self):
+    def icon(self) -> str | None:
         """Return the icon to use in the frontend."""
-        return "mdi:ev-station" #if self.is_on else "mdi:ev-station-outline"
+        return "mdi:ev-station" if self.is_on else "mdi:ev-station-outline"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""
         try:
-            await self.coordinator.client.start_charging()
+            await self.coordinator.client.start_charging()  # type: ignore[attr-defined]
             await self.coordinator.async_request_refresh()
-        except Exception as e:
-            _LOGGER.error("Failed to start charging: %s", e)
+        except DriveeError as err:
+            _LOGGER.error("Failed to start charging: %s", err)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging."""
         try:
-            if self.coordinator.client.session_id:
-                await self.coordinator.client.end_charging()
-                await self.coordinator.async_request_refresh()
-            else:
-                _LOGGER.warning("No active charging session to stop")
-        except Exception as e:
-            _LOGGER.error("Failed to stop charging: %s", e) 
+            await self.coordinator.client.end_charging()  # type: ignore[attr-defined]
+            await self.coordinator.async_request_refresh()
+        except ValueError as err:
+            _LOGGER.warning("No active charging session to stop: %s", err)
+        except DriveeError as err:
+            _LOGGER.error("Failed to stop charging: %s", err)

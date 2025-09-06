@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .client.drivee_client import DriveeClient
+from .drivee_client.drivee_client import DriveeClient
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
 
@@ -32,11 +32,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     # Create client
-    client = DriveeClient(
+    client: DriveeClient = DriveeClient(
         username=entry.data["username"],
         password=entry.data["password"],
-        device_id="b1a9feedadc049ba",
-        app_version="2.126.0",
     )
 
     # Create coordinator for updating data
