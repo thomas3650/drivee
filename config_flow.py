@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from drivee_client.drivee_client import DriveeClient
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+
+from .drivee_client.drivee_client import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 
