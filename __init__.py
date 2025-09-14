@@ -2,30 +2,27 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import timedelta
-from typing import Any
+import logging
 
+from homeassistant.config import ConfigType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .drivee_client.drivee_client import DriveeClient
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
+from .drivee_client.drivee_client import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 
-# Set up logging
-logging.getLogger("custom_components.drivee").setLevel(logging.DEBUG)
-logging.getLogger("custom_components.drivee.client").setLevel(logging.DEBUG)
-
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Drivee integration."""
     return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Drivee from a config entry."""
@@ -41,8 +38,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DriveeDataUpdateCoordinator(
         hass,
         _LOGGER,
-        name="drivee_charge_points",
-        update_interval=timedelta(seconds=30),
+        name="DriveeDataUpdateCoordinator",
+        update_interval=timedelta(minutes=10),
         client=client,
     )
 
@@ -56,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

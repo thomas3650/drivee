@@ -5,15 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from drivee_client.drivee_client import DriveeClient
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-
-from .const import DOMAIN, DEFAULT_DEVICE_ID, DEFAULT_APP_VERSION
-from drivee_client.drivee_client import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,16 +20,18 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+
 class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
     """Handle a config flow for Drivee."""
 
     VERSION = 1
+    MINOR_VERSION = 1
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+        self, user_input: Any | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             try:
@@ -41,17 +39,16 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
                 async with DriveeClient(
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
-                    device_id="b1a9feedadc049ba",
-                    app_version="2.126.0"
                 ) as client:
                     await client.authenticate()
-                    await client.refresh_state()
+                await self.async_set_unique_id(user_input[CONF_USERNAME])
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=user_input[CONF_USERNAME],
                     data=user_input,
                 )
-            except Exception as e:
-                _LOGGER.error("Failed to authenticate: %s", str(e))
+            except Exception:
+                _LOGGER.exception("Failed to authenticate")
                 errors["base"] = "auth"
 
         return self.async_show_form(

@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, timedelta
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
@@ -27,7 +27,9 @@ async def async_setup_entry(
     async_add_entities([DriveeChargingSwitch(coordinator)])
 
 
-class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
+class DriveeChargingSwitch(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SwitchEntity
+):
     """Representation of a Drivee charging switch.
 
     Note: Pylance may report a type conflict for 'available' due to multiple inheritance
@@ -37,6 +39,8 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
 
     _attr_has_entity_name = True
     _attr_translation_key = "charging"
+    _attr_icon = "mdi:ev-station"
+    _attr_unique_id = "charging"
     _attr_entity_category = (
         EntityCategory.CONFIG
     )  # Set to CONFIG or None as appropriate
@@ -44,18 +48,12 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the switch."""
         super().__init__(coordinator)
-        entry_id = getattr(getattr(coordinator, "config_entry", None), "entry_id", None)
-        self._attr_unique_id = f"{entry_id}_charging" if entry_id else None
-        self._attr_icon = "mdi:ev-station"
 
     @property
     def is_on(self) -> bool | None:
         """Return true if charging is active."""
         data = self.coordinator.data
-        charge_point = data.get("charge_point")
-        if not charge_point or not hasattr(charge_point, "evse"):
-            return False
-        return getattr(charge_point.evse, "is_charging", False)
+        return data.charge_point.evse.is_charging
 
     @property
     def icon(self) -> str | None:
@@ -65,17 +63,15 @@ class DriveeChargingSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""
         try:
-            await self.coordinator.client.start_charging()  # type: ignore[attr-defined]
-            await self.coordinator.async_request_refresh()
+            await self.coordinator.client.start_charging()
+            self.hass.add_job(self.coordinator.async_request_refresh)
         except DriveeError as err:
             _LOGGER.error("Failed to start charging: %s", err)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Stop charging."""
         try:
-            await self.coordinator.client.end_charging()  # type: ignore[attr-defined]
-            await self.coordinator.async_request_refresh()
-        except ValueError as err:
-            _LOGGER.warning("No active charging session to stop: %s", err)
+            await self.coordinator.client.end_charging()
+            self.hass.add_job(self.coordinator.async_request_refresh)
         except DriveeError as err:
             _LOGGER.error("Failed to stop charging: %s", err)

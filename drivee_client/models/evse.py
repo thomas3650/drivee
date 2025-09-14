@@ -64,6 +64,15 @@ class EVSE(BaseModel[EVSEDTO]):
             EVSEStatus.SUSPENDED,
             EVSEStatus.PENDING
         )
+    
+    @property
+    def is_connected(self) -> bool:
+        return self.status in (
+            EVSEStatus.CHARGING,
+            EVSEStatus.SUSPENDED,
+            EVSEStatus.PENDING,
+            EVSEStatus.PREPARING
+        )
         
     def get_available_connectors(self) -> List[Connector]:
         """Get all connectors that are currently available for charging.

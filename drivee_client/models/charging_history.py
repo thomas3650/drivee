@@ -20,6 +20,11 @@ class ChargingHistory(BaseModel[ChargingHistoryDTO]):
     def sessions(self) -> List[ChargingSession]:
         """Get all charging sessions in the history."""
         return self._sessions
+    
+    @property
+    def last_session(self) -> ChargingSession | None:
+        """Get the most recent charging session, or None if there are no sessions."""
+        return self._sessions[-1] if self._sessions else None
 
     def validate_business_rules(self) -> None:
         """Validate that this charging history satisfies all business rules.

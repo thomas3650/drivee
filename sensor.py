@@ -1,22 +1,25 @@
 """Support for Drivee sensors."""
+
 from __future__ import annotations
 
-from datetime import datetime
+from decimal import Decimal
 import logging
-from typing import Any, Optional
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import DriveeDataUpdateCoordinator
 from .const import DOMAIN
-from .client.models import ChargingSession
+from .coordinator import DriveeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+# Global prefix for translation keys
+TRANSLATION_KEY_PREFIX = "drivee_sensor"
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -25,81 +28,106 @@ async def async_setup_entry(
 ) -> None:
     """Set up Drivee sensors."""
     coordinator: DriveeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([
-        DriveeChargePointNameSensor(coordinator),
-        DriveeEVSEStatusSensor(coordinator),
-        DriveeLastChargingSessionSensor(coordinator),
-        DriveeSessionPowerSensor(coordinator),
-        DriveeSessionDurationSensor(coordinator),
-        DriveeSessionEnergySensor(coordinator),
-        DriveeSessionCostSensor(coordinator),
-    ])
+    async_add_entities(
+        [
+            DriveeChargePointNameSensor(coordinator),
+            DriveeEVSEStatusSensor(coordinator),
+            DriveeLastChargingSessionSensor(coordinator),
+            DriveeSessionPowerSensor(coordinator),
+            DriveeSessionDurationSensor(coordinator),
+            DriveeSessionEnergySensor(coordinator),
+            DriveeSessionCostSensor(coordinator),
+        ]
+    )
 
-class DriveeChargePointNameSensor(CoordinatorEntity, SensorEntity):
-    """Drivee charge point name sensor."""
+
+class DriveeChargePointNameSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the Drivee charge point name."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "charge_point_name"
+    _attr_icon = "mdi:ev-station"
+    _attr_unique_id = "drivee_name"
+    _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
+        """Initialize the Drivee charge point name sensor."""
         super().__init__(coordinator)
-        self._attr_name = "drivee name"
-        self._attr_unique_id = "drivee_name"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:ev-station"
 
     @property
     def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.charge_point:
-            return "unknown"
-            
+        """Return the name of the charge point, or None if unavailable."""
         return self.coordinator.data.charge_point.name
 
-class DriveeEVSEStatusSensor(CoordinatorEntity, SensorEntity):
-    """Drivee EVSE status sensor."""
+
+class DriveeEVSEStatusSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the Drivee EVSE status."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_status"
+    _attr_icon = "mdi:ev-station"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
+        """Initialize the Drivee EVSE status sensor."""
         super().__init__(coordinator)
-        self._attr_name = "drivee status"
         self._attr_unique_id = "drivee_status"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:ev-station"
+        self._attr_device_class = None
 
     @property
     def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.charge_point:
-            return "unknown"
-            
-        return self.coordinator.data.charge_point.evse.status
-    
-class DriveeSessionPowerSensor(CoordinatorEntity, SensorEntity):
+        """Return the EVSE status, or None if unavailable."""
+        data = self.coordinator.data
+        if not data or not getattr(data, "charge_point", None):
+            return None
+        return data.charge_point.evse.status
+
+
+class DriveeSessionPowerSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the current or last charging session power."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_power"
+    _attr_icon = "mdi:ev-station"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "drivee session power"
         self._attr_unique_id = "drivee_session_power"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:ev-station"
+        self._attr_device_class = None
 
     @property
-    def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.currentSession:
-            return "No charging session active"
-        session = self.coordinator.data.charge_point.evse.session
-        return f"{session.power/1000:.1f}kW"
-    
-class DriveeSessionDurationSensor(CoordinatorEntity, SensorEntity):
+    def native_value(self) -> float | None:
+        """Return the power of the last charging session in kW, or None if unavailable.
+        Note: The ChargingSession model does not provide a per-session power attribute.
+        """
+        # The Drivee API/model does not provide per-session power.
+        return None
+
+
+class DriveeSessionDurationSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the current or last charging session duration."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_duration"
+    _attr_icon = "mdi:clock-time-five-outline"
+    _attr_unique_id = "drivee_session_duration"
+    _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "drivee session duration"
-        self._attr_unique_id = "drivee_session_duration"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:clock-time-five-outline"
 
     def _format_duration(self, seconds: int) -> str:
         hours = seconds // 3600
@@ -107,125 +135,145 @@ class DriveeSessionDurationSensor(CoordinatorEntity, SensorEntity):
         return f"{hours}h {minutes}m"
 
     @property
-    def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.currentSession:
-            return "No charging session active"
-        session = self.coordinator.data.charge_point.evse.session
-        return self._format_duration(session.duration)
+    def native_value(self) -> int | None:
+        """Return the duration of the last charging session in seconds, or None if unavailable."""
+        # data = self.coordinator.data
+        # session = data.last_session if data else None
+        # if not session or getattr(session, "duration", None) is None:
+        #     return None
+        return None
 
-class DriveeSessionEnergySensor(CoordinatorEntity, SensorEntity):
 
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_name = "drivee session energy"
-        self._attr_unique_id = "drivee_session_energy"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:battery-charging-50"
+class DriveeSessionEnergySensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the current or last charging session energy."""
 
-    @property
-    def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.currentSession:
-            return "No charging session active"
-        session = self.coordinator.data.charge_point.evse.session
-        return f"{session.energy/1000:.1f}kWh"
-
-class DriveeSessionCostSensor(CoordinatorEntity, SensorEntity):
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_energy"
+    _attr_icon = "mdi:battery-charging-50"
+    _attr_unique_id = "drivee_session_energy"
+    _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "drivee session cost"
-        self._attr_unique_id = "drivee_session_cost"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:cash-100"
 
     @property
-    def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.currentSession:
-            return "No charging session active"
-        session = self.coordinator.data.charge_point.evse.session
-        return f"{session.amount} kr."
-class DriveeLastChargingSessionSensor(CoordinatorEntity, SensorEntity):
+    def native_value(self) -> float | None:
+        """Return the energy of the last charging session in kWh, or None if unavailable."""
+        data = self.coordinator.data
+        session = data.last_session if data else None
+        if not session or getattr(session, "energy", None) is None:
+            return None
+        return float(session.energy) / 1000
+
+
+class DriveeSessionCostSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the current or last charging session cost."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_cost"
+    _attr_icon = "mdi:cash-100"
+    _attr_unique_id = "drivee_session_cost"
+    _attr_device_class = None
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self) -> Decimal | None:
+        """Return the cost of the last charging session in kr, or None if unavailable."""
+        data = self.coordinator.data
+        if not data.last_session:
+            return None
+        return data.last_session.amount
+
+
+class DriveeLastChargingSessionSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
     """Sensor for displaying the last charging session information."""
 
+    _attr_name = "drivee last charging session"
+    _attr_unique_id = "drivee_last_session"
+    _attr_native_value = None
+    _attr_icon = "mdi:history"
+    _attr_extra_state_attributes = {}
+
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = "drivee last charging session"
-        self._attr_unique_id = "drivee_last_session"
-        self._attr_native_value = None
-        self._attr_icon = "mdi:history"
-        self._attr_extra_state_attributes = {}
-        
-    @property
-    def native_value(self) -> StateType:
-        """Return the state of the sensor."""
-        if not self.coordinator.data or not self.coordinator.data.last_session:
-            return "No sessions"
-        _LOGGER.debug("self.coordinator.data.last_session: %s", self.coordinator.data.last_session)
-        # Return the energy consumed in the last session
-        energy = round(self.coordinator.data.last_session.energy / 1000, 2)
-        return f"{energy} kWh"
-    
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        if not self.coordinator.data or not self.coordinator.data.last_session:
-            return {}
-            
-        return self._prepare_session_attributes(self.coordinator.data.last_session)
-    
-    def _prepare_session_attributes(self, session) -> dict[str, Any]:
-        """Prepare attributes from session data."""
-        started_at = session.started_at.isoformat() if session.started_at else None
-        stopped_at = session.stopped_at.isoformat() if session.stopped_at else None
-        
-        # Basic session information
-        attributes = {
-            "session_id": session.id,
-            "started_at": started_at,
-            "stopped_at": stopped_at,
-            "duration_minutes": round(session.duration / 60, 1),
-            "energy_kwh": round(session.energy / 1000, 2),
-            "amount": float(session.amount),
-            "currency": session.currency.code,
-            "status": session.status,
-            "charging_state": session.charging_state,
-            "power_w": session.power,
-            "power_kw": round(session.power / 1000, 2),
-            "power_avg": session.power_avg,
-        }
-        
-        # Format data points for graphing
-        data_points = []
-        
-        # Add charging periods as data points for time-series charts
-        if hasattr(session, "charging_periods") and session.charging_periods:
-            for period in session.charging_periods:
-                # Ensure we have a timestamp
-                if not period.started_at:
-                    continue
-                    
-                # Create a data point for each period
-                data_point = {
-                    "timestamp": period.started_at.isoformat(),
-                    "state": period.state,
-                    "duration_seconds": period.duration_in_seconds,
-                    "amount": float(period.amount)
-                }
-                
-                
-                data_points.append(data_point)
-            
-            # Sort data points by timestamp
-            data_points.sort(key=lambda x: x["timestamp"])
-            _LOGGER.debug("data_points count: %d", len(data_points))
-            # Add data points array formatted for graphing
-            attributes["data_points"] = data_points
-        
-        return attributes 
 
+    @property
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        if not self.coordinator.data.last_session:
+            return None
+        return round(self.coordinator.data.last_session.energy / 1000, 2)
+
+    @property
+    def native_unit_of_measurement(self):
+        return "kWh"
+
+    # @property
+    # def extra_state_attributes(self) -> dict[str, Any]:
+    #     """Return the state attributes."""
+    #     if not self.coordinator.data or not self.coordinator.data.last_session:
+    #         return {}
+
+    #     return self._prepare_session_attributes(self.coordinator.data.last_session)
+
+    # def _prepare_session_attributes(self, session) -> dict[str, Any]:
+    #     """Prepare attributes from session data."""
+    #     started_at = session.started_at.isoformat() if session.started_at else None
+    #     stopped_at = session.stopped_at.isoformat() if session.stopped_at else None
+
+    #     # Basic session information
+    #     attributes = {
+    #         "session_id": session.id,
+    #         "started_at": started_at,
+    #         "stopped_at": stopped_at,
+    #         "duration_minutes": round(session.duration / 60, 1),
+    #         "energy_kwh": round(session.energy / 1000, 2),
+    #         "amount": float(session.amount),
+    #         "currency": session.currency.code,
+    #         "status": session.status,
+    #         "charging_state": session.charging_state,
+    #         "power_w": session.power,
+    #         "power_kw": round(session.power / 1000, 2),
+    #         "power_avg": session.power_avg,
+    #     }
+
+    #     # Format data points for graphing
+    #     data_points = []
+
+    #     # Add charging periods as data points for time-series charts
+    #     if hasattr(session, "charging_periods") and session.charging_periods:
+    #         for period in session.charging_periods:
+    #             # Ensure we have a timestamp
+    #             if not period.started_at:
+    #                 continue
+
+    #             # Create a data point for each period
+    #             data_point = {
+    #                 "timestamp": period.started_at.isoformat(),
+    #                 "state": period.state,
+    #                 "duration_seconds": period.duration_in_seconds,
+    #                 "amount": float(period.amount),
+    #             }
+
+    #             data_points.append(data_point)
+
+    #         # Sort data points by timestamp
+    #         data_points.sort(key=lambda x: x["timestamp"])
+    #         _LOGGER.debug("data_points count: %d", len(data_points))
+    #         # Add data points array formatted for graphing
+    #         attributes["data_points"] = data_points
+
+    #     return attributes

@@ -24,6 +24,7 @@ class EVSEStatus(str, Enum):
     SUSPENDED = "suspended"
     PENDING = "pending"
     READY = "ready"
+    PREPARING = "preparing"
 
 class ConnectorStatus(str, Enum):
     """Valid connector operational statuses."""

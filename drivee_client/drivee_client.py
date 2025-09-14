@@ -87,10 +87,10 @@ class DriveeClient:
 
     async def init(self) -> None:
         """Initialize the client by authenticating and refreshing state."""
-        await self._authenticate()
+        await self.authenticate()
         await self._refresh_state()
     
-    async def _authenticate(self) -> None:
+    async def authenticate(self) -> None:
         """Authenticate with the Drivee API."""
         _LOGGER.info("Authenticating with Drivee API")
 
@@ -303,4 +303,4 @@ class DriveeClient:
             self._token_expires_at and datetime.now() >= self._token_expires_at
         ):
             _LOGGER.info("Token expired or missing, re-authenticating")
-            await self._authenticate()
+            await self.authenticate()
