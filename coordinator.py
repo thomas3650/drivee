@@ -61,25 +61,30 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
         self.client = client
         self._last_charging_history_update = 0.0
         self._cached_charging_history = None
+        self._last_price_periods_update = 0.0
+        self._cached_price_periods = None
 
     async def _update_data(self) -> DriveeData:
         """Fetch data from API."""
 
         try:
             charge_point = await self.client.get_charge_point()
-            price_periods = await self.client.get_price_periods()   
 
             now = time.time()
             last_update = timedelta(seconds=now - self._last_charging_history_update)
 
-            if self._cached_charging_history is None or last_update > timedelta(
-                hours=1
-            ):
+            if self._cached_charging_history is None or last_update > timedelta(hours=1):
                 charging_history = await self.client.get_charging_history()
                 self._cached_charging_history = charging_history
                 self._last_charging_history_update = now
             else:
                 charging_history = self._cached_charging_history
+
+            if self._cached_price_periods is None or last_update > timedelta(hours=1):
+                price_periods = await self.client.get_price_periods()
+                self._cached_price_periods = price_periods
+            else:
+                price_periods = self._cached_price_periods
 
             if charge_point.evse.is_charging:
                 self.update_interval = timedelta(seconds=30)

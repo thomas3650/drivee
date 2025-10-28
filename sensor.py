@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 import datetime
 import logging
+import string
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -301,50 +302,32 @@ class DriveePriceSensor(
         super().__init__(coordinator)
 
     @property
-    def native_value(self) -> StateType:
+    def native_value(self) -> float | str | None:
         """Return the current price per kWh, or None if unavailable."""
         data = self.coordinator.data
         price_periods = data.price_periods
         now = datetime.datetime.now(datetime.timezone.utc)
-        current_period = None
-        for period in price_periods:
-            start = period.start
-            end = period.end
-            if start and end:
-                if isinstance(start, str):
-                    start = datetime.datetime.fromisoformat(start)
-                if isinstance(end, str):
-                    end = datetime.datetime.fromisoformat(end)
-                if start <= now < end:
-                    current_period = period
-                    break
+        current_period = price_periods.get_price_at(now)
         if not current_period:
-            return None
-        return current_period.price
+            return "Price unavailable"
+        return current_period.price_per_kwh
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return attributes for the current price period only."""
+        """Return all price periods as an array of dicts."""
         data = self.coordinator.data
         price_periods = data.price_periods
-        now = datetime.datetime.now(datetime.timezone.utc)
-        current_period = None
-        for period in price_periods:
-            start = period.start
-            end = period.end
-            if start and end:
-                if isinstance(start, str):
-                    start = datetime.datetime.fromisoformat(start)
-                if isinstance(end, str):
-                    end = datetime.datetime.fromisoformat(end)
-                if start <= now < end:
-                    current_period = period
-                    break
-        if not current_period:
+        if not price_periods:
             return None
-        return {
-            "current_start": current_period.start,
-            "current_end": current_period.end,
-            "current_price": current_period.price,
-            "current_currency": current_period.currency,
-        }
+        # Build a list of all periods
+        periods_list = []
+        for period in price_periods:
+            periods_list.append({
+                "start": period.start_date,
+                "end": period.end_date,
+                "price_per_kwh": period.price_per_kwh,
+            })
+            attributes= {
+                "periods": periods_list
+            }
+        return attributes
