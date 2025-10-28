@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from decimal import Decimal
+import datetime
 import logging
+from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -37,6 +39,7 @@ async def async_setup_entry(
             DriveeSessionDurationSensor(coordinator),
             DriveeSessionEnergySensor(coordinator),
             DriveeSessionCostSensor(coordinator),
+            DriveePricePeriodsSensor(coordinator),  # <-- Add new sensor here
         ]
     )
 
@@ -280,3 +283,68 @@ class DriveeLastChargingSessionSensor(
     #         attributes["data_points"] = data_points
 
     #     return attributes
+
+
+class DriveePriceSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for displaying the current price information from Drivee."""
+
+    _attr_name = "drivee current price"
+    _attr_unique_id = "drivee_price"
+    _attr_icon = "mdi:currency-usd"
+    _attr_device_class = None
+    _attr_native_unit_of_measurement = "kr/kWh"
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the current price per kWh, or None if unavailable."""
+        data = self.coordinator.data
+        price_periods = data.price_periods
+        now = datetime.datetime.now(datetime.timezone.utc)
+        current_period = None
+        for period in price_periods:
+            start = period.start
+            end = period.end
+            if start and end:
+                if isinstance(start, str):
+                    start = datetime.datetime.fromisoformat(start)
+                if isinstance(end, str):
+                    end = datetime.datetime.fromisoformat(end)
+                if start <= now < end:
+                    current_period = period
+                    break
+        if not current_period:
+            return None
+        return current_period.price
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return attributes for the current price period only."""
+        data = self.coordinator.data
+        price_periods = data.price_periods
+        now = datetime.datetime.now(datetime.timezone.utc)
+        current_period = None
+        for period in price_periods:
+            start = period.start
+            end = period.end
+            if start and end:
+                if isinstance(start, str):
+                    start = datetime.datetime.fromisoformat(start)
+                if isinstance(end, str):
+                    end = datetime.datetime.fromisoformat(end)
+                if start <= now < end:
+                    current_period = period
+                    break
+        if not current_period:
+            return None
+        return {
+            "current_start": current_period.start,
+            "current_end": current_period.end,
+            "current_price": current_period.price,
+            "current_currency": current_period.currency,
+        }

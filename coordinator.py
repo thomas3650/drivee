@@ -10,6 +10,8 @@ import time
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from drivee_client.models import price_periods
+
 from .drivee_client.drivee_client import DriveeClient
 from .drivee_client.models.charge_point import ChargePoint
 from .drivee_client.models.charging_history import ChargingHistory
@@ -24,6 +26,7 @@ class DriveeData:
 
     charge_point: ChargePoint
     charging_history: ChargingHistory
+    price_periods: price_periods.PricePeriods
 
     @property
     def last_session(self) -> ChargingSession | None:
@@ -64,6 +67,7 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
 
         try:
             charge_point = await self.client.get_charge_point()
+            price_periods = await self.client.get_price_periods()   
 
             now = time.time()
             last_update = timedelta(seconds=now - self._last_charging_history_update)
@@ -85,6 +89,7 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
             return DriveeData(
                 charge_point=charge_point,
                 charging_history=charging_history,
+                price_periods=price_periods
             )
 
         except Exception:
