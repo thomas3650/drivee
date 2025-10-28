@@ -1,10 +1,11 @@
 """DTO for EVSE (Electric Vehicle Supply Equipment) data transfer."""
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field
 
+from .charging_session_dto import ChargingSessionDTO
 from .base_dto import BaseDTO
 from .connector_dto import ConnectorDTO
 
@@ -22,3 +23,4 @@ class EVSEDTO(BaseDTO):
 
     # Additional fields
     identifier: str = Field(..., alias="identifier")
+    session: Optional[ChargingSessionDTO] = Field(None, alias="session")

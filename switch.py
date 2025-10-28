@@ -17,6 +17,7 @@ from .coordinator import DriveeDataUpdateCoordinator
 from .drivee_client.errors import DriveeError
 
 _LOGGER = logging.getLogger(__name__)
+TRANSLATION_KEY_PREFIX = "drivee_switch"
 
 
 async def async_setup_entry(
@@ -54,11 +55,6 @@ class DriveeChargingSwitch(
         """Return true if charging is active."""
         data = self.coordinator.data
         return data.charge_point.evse.is_charging
-
-    @property
-    def icon(self) -> str | None:
-        """Return the icon to use in the frontend."""
-        return "mdi:ev-station" if self.is_on else "mdi:ev-station-outline"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""

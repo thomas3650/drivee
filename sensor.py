@@ -52,10 +52,13 @@ class DriveeChargePointNameSensor(
     _attr_icon = "mdi:ev-station"
     _attr_unique_id = "drivee_name"
     _attr_device_class = None
+    _attr_name = "drivee charge point name"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee charge point name sensor."""
         super().__init__(coordinator)
+        #charge_point_id = getattr(self.coordinator.data.charge_point, "id", None)
+        #self._attr_unique_id = "drivee_name" #f"{charge_point_id}_name" if charge_point_id else None
 
     @property
     def native_value(self) -> StateType:
@@ -72,12 +75,12 @@ class DriveeEVSEStatusSensor(
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_status"
     _attr_icon = "mdi:ev-station"
+    _attr_unique_id = "drivee_status"
+    _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee EVSE status sensor."""
         super().__init__(coordinator)
-        self._attr_unique_id = "drivee_status"
-        self._attr_device_class = None
 
     @property
     def native_value(self) -> StateType:
@@ -97,12 +100,12 @@ class DriveeSessionPowerSensor(
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_power"
     _attr_icon = "mdi:ev-station"
+    _attr_unique_id = "drivee_session_power"
+    _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._attr_unique_id = "drivee_session_power"
-        self._attr_device_class = None
+        super().__init__(coordinator)        
 
     @property
     def native_value(self) -> float | None:
@@ -190,9 +193,9 @@ class DriveeSessionCostSensor(
     def native_value(self) -> Decimal | None:
         """Return the cost of the last charging session in kr, or None if unavailable."""
         data = self.coordinator.data
-        if not data.last_session:
+        if not data.charge_point.evse.session:
             return None
-        return data.last_session.amount
+        return data.charge_point.evse.session.amount
 
 
 class DriveeLastChargingSessionSensor(

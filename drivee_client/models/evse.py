@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import List
 
+from .charging_session import ChargingSession
+
 from ..dtos.evse_dto import EVSEDTO
 from .base_model import BaseModel, BusinessRuleError
 from .connector import Connector
@@ -30,6 +32,13 @@ class EVSE(BaseModel[EVSEDTO]):
         self._dto: EVSEDTO = dto
         self._connectors = [Connector(conn) for conn in dto.connectors or []]
     
+    @property
+    def session(self) -> ChargingSession | None:
+        """Get the current charging session associated with this EVSE, if any."""
+        if self._dto.session:
+            return ChargingSession(self._dto.session)
+        return None
+
     @property
     def status(self) -> EVSEStatus:
         """Get the current status of the EVSE.
@@ -74,6 +83,8 @@ class EVSE(BaseModel[EVSEDTO]):
             EVSEStatus.PREPARING
         )
         
+
+
     def get_available_connectors(self) -> List[Connector]:
         """Get all connectors that are currently available for charging.
         
