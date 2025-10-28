@@ -15,15 +15,18 @@ from tenacity import (
 
 from .errors import AuthenticationError
 from .dtos import (
-    ChargePointDTO
+    ChargePointDTO,
+    PricePeriodsDTO
 )
 from .dtos.charging_history_dto import ChargingHistoryDTO
 from .dtos.charging_responses_dto import ChargingResponseDTO
 from .models import (
-    ChargePoint
+    ChargePoint,
+    PricePeriods
 )
 from .models.charging_history import ChargingHistory
 from .models.charging_response import ChargingResponseModel
+from .models.price_periods import PricePeriods
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -297,6 +300,18 @@ class DriveeClient:
             raise
         finally:
             await self.get_charge_point()  # Refresh state after ending session
+
+    async def get_price_periods(self) -> PricePeriods:
+        assert self._charge_point
+        endpoint = f"app/tariffs/tou/{self._charge_point.evse.id}/price-periods"
+        try:
+            data = await self._make_request("GET", endpoint)
+            price_periods_dto = PricePeriodsDTO(**data)
+            price_periods = PricePeriods(price_periods_dto)
+            return price_periods
+        except Exception as e:
+            _LOGGER.exception("Error fetching price periods: %s", str(e))
+            raise
 
     async def _validate_token(self) -> None:
         if not self._access_token or (

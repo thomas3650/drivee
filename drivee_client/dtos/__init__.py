@@ -15,6 +15,7 @@ from .connector_dto import ConnectorDTO
 from .currency_dto import CurrencyDTO
 from .evse_dto import EVSEDTO
 from .payment_details_dto import PaymentDetailsDTO
+from .price_periods_dto import PricePeriodsDTO, PricePeriodDTO
 
 __all__ = [
      
@@ -37,5 +38,9 @@ __all__ = [
     'PaymentDetailsDTO',
         
     # API responses
-    'ChargingResponseDTO'
+    'ChargingResponseDTO',
+    
+    # Price period related
+    'PricePeriodsDTO',
+    'PricePeriodDTO'
 ]

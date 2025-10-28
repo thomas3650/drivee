@@ -10,10 +10,13 @@ from .base_model import BaseModel
 from .charge_point import ChargePoint
 from .connector import Connector
 from .evse import EVSE
+from .price_periods import PricePeriods, PricePeriod
 
 __all__ = [
     "BaseModel",
     "ChargePoint",
     "Connector",
     "EVSE",
+    "PricePeriods",
+    "PricePeriod",
 ]
