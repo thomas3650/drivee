@@ -7,9 +7,10 @@
     "@thomas3650"
   ],
   "requirements": [
-   "aiohttp>=3.12.15",
-   "tenacity>=8.0.0",
-   "pydantic>=2.11.7"
+    "aiohttp>=3.12.15",
+    "tenacity>=8.0.0",
+    "pydantic>=2.11.7",
+    "driveeClient>=1.0.0"
   ],
   "version": "0.1.0",
   "config_flow": true,

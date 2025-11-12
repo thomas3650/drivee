@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
-from .drivee_client.drivee_client import DriveeClient
+from driveeClient import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 

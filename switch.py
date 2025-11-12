@@ -14,7 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
-from .drivee_client.errors import DriveeError
+from driveeClient.errors import DriveeError
 
 _LOGGER = logging.getLogger(__name__)
 TRANSLATION_KEY_PREFIX = "drivee_switch"

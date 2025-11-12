@@ -10,12 +10,11 @@ import time
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from drivee_client.models import price_periods
-
-from .drivee_client.drivee_client import DriveeClient
-from .drivee_client.models.charge_point import ChargePoint
-from .drivee_client.models.charging_history import ChargingHistory
-from .drivee_client.models.charging_session import ChargingSession
+from driveeClient import DriveeClient
+from driveeClient.models.charge_point import ChargePoint
+from driveeClient.models.charging_history import ChargingHistory
+from driveeClient.models.charging_session import ChargingSession
+from driveeClient.models.price_periods import PricePeriods
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class DriveeData:
 
     charge_point: ChargePoint
     charging_history: ChargingHistory
-    price_periods: price_periods.PricePeriods
+    price_periods: PricePeriods
 
     @property
     def last_session(self) -> ChargingSession | None:
