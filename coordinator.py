@@ -10,11 +10,11 @@ import time
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from driveeClient import DriveeClient
-from driveeClient.models.charge_point import ChargePoint
-from driveeClient.models.charging_history import ChargingHistory
-from driveeClient.models.charging_session import ChargingSession
-from driveeClient.models.price_periods import PricePeriods
+from drivee_client import DriveeClient
+from drivee_client.models.charge_point import ChargePoint
+from drivee_client.models.charging_history import ChargingHistory
+from drivee_client.models.charging_session import ChargingSession
+from drivee_client.models.price_periods import PricePeriods
 
 _LOGGER = logging.getLogger(__name__)
 

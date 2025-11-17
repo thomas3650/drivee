@@ -10,7 +10,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
-from driveeClient import DriveeClient
+from drivee_client import DriveeClient  # changed from driveeClient
 
 _LOGGER = logging.getLogger(__name__)
 

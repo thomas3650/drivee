@@ -40,7 +40,7 @@ async def async_setup_entry(
             DriveeSessionDurationSensor(coordinator),
             DriveeSessionEnergySensor(coordinator),
             DriveeSessionCostSensor(coordinator),
-            DriveePricePeriodsSensor(coordinator),  # <-- Add new sensor here
+            DriveePriceSensor(coordinator),
         ]
     )
 
@@ -302,32 +302,36 @@ class DriveePriceSensor(
         super().__init__(coordinator)
 
     @property
-    def native_value(self) -> float | str | None:
+    def native_value(self) -> float | str | None:  # type: ignore[override]
         """Return the current price per kWh, or None if unavailable."""
         data = self.coordinator.data
         price_periods = data.price_periods
-        now = datetime.datetime.now(datetime.timezone.utc)
-        current_period = price_periods.get_price_at(now)
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)  # produce naive UTC
+        current_period = None
+        try:
+            current_period = price_periods.get_price_at(now)
+        except Exception:
+            _LOGGER.debug("Price lookup failed for %s", now)
         if not current_period:
-            return "Price unavailable"
+            return None
         return current_period.price_per_kwh
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:
+    def extra_state_attributes(self) -> dict[str, Any] | None:  # type: ignore[override]
         """Return all price periods as an array of dicts."""
         data = self.coordinator.data
-        price_periods = data.price_periods
-        if not price_periods:
+        pp = data.price_periods
+        if not pp:
             return None
-        # Build a list of all periods
-        periods_list = []
-        for period in price_periods:
-            periods_list.append({
-                "start": period.start_date,
-                "end": period.end_date,
-                "price_per_kwh": period.price_per_kwh,
+        periods_source = getattr(pp, "periods", [])  # adapt to library structure
+        result = []
+        for period in periods_source:
+            start = getattr(period, "start_date", None)
+            end = getattr(period, "end_date", None)
+            price = getattr(period, "price_per_kwh", None)
+            result.append({
+                "start": start.isoformat() if hasattr(start, "isoformat") else start,
+                "end": end.isoformat() if hasattr(end, "isoformat") else end,
+                "price_per_kwh": price,
             })
-            attributes= {
-                "periods": periods_list
-            }
-        return attributes
+        return {"periods": result}
