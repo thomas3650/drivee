@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
-from drivee_client import DriveeClient  # changed from driveeClient
+from drivee_client import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,8 +30,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     username = str(entry.data.get("username", ""))
     password = str(entry.data.get("password", ""))
-
-    _LOGGER.info("Initializing Drivee client for username '%s' with password '%s'", username, password)
 
     # Create client
     client: DriveeClient = DriveeClient(
