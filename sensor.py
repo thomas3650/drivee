@@ -233,60 +233,58 @@ class DriveeLastChargingSessionSensor(
 class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity):
     """Sensor for displaying the current price information from Drivee."""
 
-    _attr_name = "drivee current price"
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "current_price"
     _attr_unique_id = "drivee_price"
     _attr_icon = "mdi:currency-usd"
     _attr_device_class = None
     _attr_native_unit_of_measurement = "kr/kWh"
+    _attr_suggested_display_precision = 2
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
+        """Initialize the price sensor."""
         super().__init__(coordinator)
 
     @property
-    def native_value(self) -> float | str | None:  # type: ignore[override]
+    def native_value(self) -> float | None:
         """Return the current price per kWh, or None if unavailable."""
         data = self.coordinator.data
         price_periods = data.price_periods
-        now = dt_util.now().replace(tzinfo=None)
-        _LOGGER.debug("Looking up price for current time 2 %s", now)
-        current_period = None
 
-        try:
-            current_period = price_periods.get_price_at(now)
-        except Exception:
-            _LOGGER.exception("Price lookup failed for %s", now)
+        # Use a single timestamp reference
+        now = dt_util.now().replace(tzinfo=None)
+        current_period = price_periods.get_price_at(now)
         if not current_period:
             _LOGGER.debug("No current price period found for %s", now)
             return None
-        return current_period.price_per_kwh
+        return float(current_period.price_per_kwh)
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any] | None:  # type: ignore[override]
-        """Return all price periods as an array of dicts."""
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return generic price sensor attributes: prices_today and prices_tomorrow."""
         data = self.coordinator.data
-        pp = data.price_periods
-        if not pp:
-            return None
-        periods_source = getattr(pp, "periods", [])  # adapt to library structure
-        result: list[dict[str, Any]] = []
+        price_periods = data.price_periods
+
+        periods_source = price_periods.prices()
+        today = dt_util.now().date()
+        tomorrow = today + datetime.timedelta(days=1)
+        prices_today: list[dict[str, Any]] = []
+        prices_tomorrow: list[dict[str, Any]] = []
         for period in periods_source:
-            start_dt = getattr(period, "start_date", None)
-            end_dt = getattr(period, "end_date", None)
-            price = getattr(period, "price_per_kwh", None)
-            start_str = (
-                start_dt.isoformat()
-                if isinstance(start_dt, datetime.datetime)
-                else start_dt
-            )
-            end_str = (
-                end_dt.isoformat() if isinstance(end_dt, datetime.datetime) else end_dt
-            )
-            result.append(
-                {
-                    "start": start_str,
-                    "end": end_str,
-                    "price_per_kwh": price,
-                }
-            )
-        return {"periods": result}
+            start_dt = period.start_date
+            price = period.price_per_kwh
+
+            local_date = start_dt.date()
+            time_str = start_dt.isoformat()
+            entry = {"time": time_str, "price": price}
+            if local_date == today:
+                prices_today.append(entry)
+            elif local_date == tomorrow:
+                prices_tomorrow.append(entry)
+        prices_today.sort(key=lambda x: x["time"])
+        prices_tomorrow.sort(key=lambda x: x["time"])
+        return {
+            "prices_today": prices_today,
+            "prices_tomorrow": prices_tomorrow,
+        }
