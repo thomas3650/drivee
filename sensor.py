@@ -255,7 +255,7 @@ class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEn
         try:
             current_period = price_periods.get_price_at(now)
         except Exception:
-            _LOGGER.error("Price lookup failed for %s", now, exc_info=True)
+            _LOGGER.exception("Price lookup failed for %s", now)
         if not current_period:
             _LOGGER.debug("No current price period found for %s", now)
             return None
