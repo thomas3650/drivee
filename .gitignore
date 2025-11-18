@@ -34,4 +34,5 @@ ENV/
 *.swo
 
 # Logs
-*.log 
+*.log
+__pycache__/
