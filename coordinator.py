@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
 import logging
 import time
+from datetime import timedelta
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -39,6 +40,10 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
     """Class to manage fetching Drivee data."""
 
     client: DriveeClient
+    _last_charging_history_update: float
+    _cached_charging_history: ChargingHistory | None
+    _last_price_periods_update: float
+    _cached_price_periods: PricePeriods | None
 
     def __init__(
         self,
@@ -48,6 +53,7 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
         name: str,
         update_interval: timedelta,
         client: DriveeClient,
+        config_entry: ConfigEntry,
     ) -> None:
         """Initialize the data updater."""
         super().__init__(
@@ -56,6 +62,7 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
             name=name,
             update_interval=update_interval,
             update_method=self._update_data,
+            config_entry=config_entry,
         )
         self.client = client
         self._last_charging_history_update = 0.0
@@ -63,39 +70,53 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
         self._last_price_periods_update = 0.0
         self._cached_price_periods = None
 
+    async def _async_fetch_charge_point(self) -> ChargePoint:
+        """Fetch charge point data from the API."""
+        return await self.client.get_charge_point()
+
+    async def _async_fetch_charging_history(self, now: float) -> ChargingHistory:
+        """Fetch or return cached charging history (1h cache)."""
+        last_update_delta = timedelta(seconds=now - self._last_charging_history_update)
+        if self._cached_charging_history is None or last_update_delta > timedelta(
+            hours=1
+        ):
+            charging_history = await self.client.get_charging_history()
+            self._cached_charging_history = charging_history
+            self._last_charging_history_update = now
+        return self._cached_charging_history
+
+    async def _async_fetch_price_periods(self, now: float) -> PricePeriods:
+        """Fetch or return cached price periods (1h cache)."""
+        last_update_delta = timedelta(seconds=now - self._last_price_periods_update)
+        if self._cached_price_periods is None or last_update_delta > timedelta(hours=1):
+            price_periods = await self.client.get_price_periods()
+            self._cached_price_periods = price_periods
+            self._last_price_periods_update = now
+        return self._cached_price_periods
+
     async def _update_data(self) -> DriveeData:
-        """Fetch data from API."""
+        """Fetch data from API and build DriveeData.
 
+        Adjust the update interval dynamically based on charging state.
+        """
         try:
-            charge_point = await self.client.get_charge_point()
-
             now = time.time()
-            last_update = timedelta(seconds=now - self._last_charging_history_update)
-
-            if self._cached_charging_history is None or last_update > timedelta(hours=1):
-                charging_history = await self.client.get_charging_history()
-                self._cached_charging_history = charging_history
-                self._last_charging_history_update = now
-            else:
-                charging_history = self._cached_charging_history
-
-            if self._cached_price_periods is None or last_update > timedelta(hours=1):
-                price_periods = await self.client.get_price_periods()
-                self._cached_price_periods = price_periods
-            else:
-                price_periods = self._cached_price_periods
-
-            if charge_point.evse.is_charging:
-                self.update_interval = timedelta(seconds=30)
-            else:
-                self.update_interval = timedelta(minutes=10)
-
-            return DriveeData(
-                charge_point=charge_point,
-                charging_history=charging_history,
-                price_periods=price_periods
-            )
-
-        except Exception:
+            charge_point = await self._async_fetch_charge_point()
+            charging_history = await self._async_fetch_charging_history(now)
+            price_periods = await self._async_fetch_price_periods(now)
+        except Exception:  # Broad to ensure coordinator robustness
             _LOGGER.exception("Error fetching data")
             raise
+
+        # Update interval depends on charging state (avoid processing inside try)
+        self.update_interval = (
+            timedelta(seconds=30)
+            if charge_point.evse.is_charging
+            else timedelta(minutes=10)
+        )
+
+        return DriveeData(
+            charge_point=charge_point,
+            charging_history=charging_history,
+            price_periods=price_periods,
+        )

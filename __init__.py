@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from homeassistant.config import ConfigType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from drivee_client import DriveeClient
+
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
-from drivee_client import DriveeClient
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -44,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name="DriveeDataUpdateCoordinator",
         update_interval=timedelta(minutes=10),
         client=client,
+        config_entry=entry,
     )
 
     # Fetch initial data
