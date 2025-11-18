@@ -35,10 +35,9 @@ async def async_setup_entry(
     async_add_entities(
         [
             DriveeChargePointNameSensor(coordinator),
-            DriveeEVSEStatusSensor(coordinator),
+            DriveeEVSEConnectedSensor(coordinator),
+            DriveeEVSEChargingSensor(coordinator),
             DriveeLastChargingSessionSensor(coordinator),
-            DriveeSessionPowerSensor(coordinator),
-            DriveeSessionDurationSensor(coordinator),
             DriveeSessionEnergySensor(coordinator),
             DriveeSessionCostSensor(coordinator),
             DriveePriceSensor(coordinator),
@@ -71,85 +70,50 @@ class DriveeChargePointNameSensor(
         return self.coordinator.data.charge_point.name
 
 
-class DriveeEVSEStatusSensor(
+class DriveeEVSEConnectedSensor(
     CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
 ):
-    """Sensor for the Drivee EVSE status."""
-
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_status"
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_connected"
     _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "drivee_status"
+    _attr_unique_id = "drivee_connected"
     _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the Drivee EVSE status sensor."""
+        """Initialize the Drivee EVSE connected sensor."""
         super().__init__(coordinator)
 
     @property
     def native_value(self) -> StateType:
-        """Return the EVSE status, or None if unavailable."""
+        """Return the EVSE connected status, or None if unavailable."""
         data = self.coordinator.data
         if not data or not getattr(data, "charge_point", None):
             return None
-        return data.charge_point.evse.status
+        return data.charge_point.evse.is_connected
 
 
-class DriveeSessionPowerSensor(
+class DriveeEVSEChargingSensor(
     CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
 ):
-    """Sensor for the current or last charging session power."""
-
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_power"
+    _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_charging"
     _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "drivee_session_power"
+    _attr_unique_id = "drivee_charging"
     _attr_device_class = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
+        """Initialize the Drivee EVSE charging sensor."""
         super().__init__(coordinator)
 
     @property
-    def native_value(self) -> float | None:
-        """Return the power of the last charging session in kW, or None if unavailable.
-        Note: The ChargingSession model does not provide a per-session power attribute.
-        """
-        # The Drivee API/model does not provide per-session power.
-        return None
-
-
-class DriveeSessionDurationSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
-    """Sensor for the current or last charging session duration."""
-
-    __slots__ = ()
-    _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_duration"
-    _attr_icon = "mdi:clock-time-five-outline"
-    _attr_unique_id = "drivee_session_duration"
-    _attr_device_class = None
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-
-    def _format_duration(self, seconds: int) -> str:
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        return f"{hours}h {minutes}m"
-
-    @property
-    def native_value(self) -> int | None:
-        """Return the duration of the last charging session in seconds, or None if unavailable."""
-        # data = self.coordinator.data
-        # session = data.last_session if data else None
-        # if not session or getattr(session, "duration", None) is None:
-        #     return None
-        return None
+    def native_value(self) -> StateType:
+        """Return the EVSE charging status, or None if unavailable."""
+        data = self.coordinator.data
+        if not data or not getattr(data, "charge_point", None):
+            return None
+        return data.charge_point.evse.is_charging
 
 
 class DriveeSessionEnergySensor(
@@ -181,7 +145,7 @@ class DriveeSessionEnergySensor(
 class DriveeSessionCostSensor(
     CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
 ):
-    """Sensor for the current or last charging session cost."""
+    """Sensor for the current session cost."""
 
     __slots__ = ()
     _attr_has_entity_name = True
