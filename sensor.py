@@ -36,7 +36,6 @@ async def async_setup_entry(
         [
             DriveeChargePointNameSensor(coordinator),
             DriveeEVSEConnectedSensor(coordinator),
-            DriveeEVSEChargingSensor(coordinator),
             DriveeLastChargingSessionSensor(coordinator),
             DriveeSessionEnergySensor(coordinator),
             DriveeSessionCostSensor(coordinator),
@@ -52,11 +51,11 @@ class DriveeChargePointNameSensor(
 
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "charge_point_name"
+    _attr_translation_key = "charge_point_name"
     _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "drivee_name"
+    _attr_unique_id = "name"
     _attr_device_class = None
-    _attr_name = "drivee charge point name"
+    _attr_name = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee charge point name sensor."""
@@ -75,10 +74,11 @@ class DriveeEVSEConnectedSensor(
 ):
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_connected"
+    _attr_translation_key = "connected"
     _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "drivee_connected"
+    _attr_unique_id = "connected"
     _attr_device_class = None
+    _attr_name = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee EVSE connected sensor."""
@@ -93,29 +93,6 @@ class DriveeEVSEConnectedSensor(
         return data.charge_point.evse.is_connected
 
 
-class DriveeEVSEChargingSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
-    __slots__ = ()
-    _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "evse_charging"
-    _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "drivee_charging"
-    _attr_device_class = None
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the Drivee EVSE charging sensor."""
-        super().__init__(coordinator)
-
-    @property
-    def native_value(self) -> StateType:
-        """Return the EVSE charging status, or None if unavailable."""
-        data = self.coordinator.data
-        if not data or not getattr(data, "charge_point", None):
-            return None
-        return data.charge_point.evse.is_charging
-
-
 class DriveeSessionEnergySensor(
     CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
 ):
@@ -123,10 +100,11 @@ class DriveeSessionEnergySensor(
 
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_energy"
+    _attr_translation_key = "session_energy"
     _attr_icon = "mdi:battery-charging-50"
-    _attr_unique_id = "drivee_session_energy"
+    _attr_unique_id = "session_energy"
     _attr_device_class = None
+    _attr_name = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
@@ -149,10 +127,11 @@ class DriveeSessionCostSensor(
 
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "session_cost"
+    _attr_translation_key = "session_cost"
     _attr_icon = "mdi:cash-100"
-    _attr_unique_id = "drivee_session_cost"
+    _attr_unique_id = "session_cost"
     _attr_device_class = None
+    _attr_name = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
@@ -172,8 +151,10 @@ class DriveeLastChargingSessionSensor(
 ):
     """Sensor for displaying the last charging session information."""
 
-    _attr_name = "drivee last charging session"
-    _attr_unique_id = "drivee_last_session"
+    _attr_has_entity_name = True
+    _attr_translation_key = "last_session"
+    _attr_name = None
+    _attr_unique_id = "last_session"
     _attr_native_value = None
     _attr_icon = "mdi:history"
     _attr_extra_state_attributes = {}
@@ -199,12 +180,13 @@ class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEn
 
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = TRANSLATION_KEY_PREFIX + "current_price"
-    _attr_unique_id = "drivee_price"
+    _attr_translation_key = "current_price"
+    _attr_unique_id = "current_price"
     _attr_icon = "mdi:currency-usd"
     _attr_device_class = None
     _attr_native_unit_of_measurement = "kr/kWh"
     _attr_suggested_display_precision = 2
+    _attr_name = "Current price"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the price sensor."""

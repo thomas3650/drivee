@@ -39,9 +39,9 @@ class DriveeChargingSwitch(
     """
 
     _attr_has_entity_name = True
-    _attr_translation_key = "charging"
+    _attr_translation_key = "Charging"
     _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "charging"
+    _attr_unique_id = "Charging"
     _attr_entity_category = (
         EntityCategory.CONFIG
     )  # Set to CONFIG or None as appropriate
