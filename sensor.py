@@ -264,6 +264,23 @@ class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEn
         """Initialize the price sensor."""
         super().__init__(coordinator)
 
+    def _local_iso(self, dt_obj: datetime.datetime | None) -> str | None:
+        if dt_obj is None:
+            return None
+        local_tz = dt_util.DEFAULT_TIME_ZONE  # Copenhagen local timezone
+        _LOGGER.info("original (provider) datetime %s", dt_obj.isoformat())
+        # Normalize to local timezone
+        if dt_obj.tzinfo is None:
+            local_dt = dt_obj.replace(tzinfo=local_tz)
+            # Provider sends times one hour ahead in winter (standard time, UTC+01:00)
+            if not local_dt.dst():  # Standard time (no DST offset)
+                local_dt = local_dt - datetime.timedelta(hours=1)
+                _LOGGER.info("adjusted winter local datetime %s", local_dt.isoformat())
+        else:
+            local_dt = dt_obj.astimezone(local_tz)
+        _LOGGER.info("final local datetime %s", local_dt.isoformat())
+        return local_dt.isoformat()
+
     @property
     def native_value(self) -> float | None:
         """Return the current price per kWh, or None if unavailable."""
@@ -290,38 +307,33 @@ class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEn
         data = self.coordinator.data
         price_periods = getattr(data, "price_periods", None) if data else None
         if not price_periods:
-            return {
-                "prices_today": [],
-                "prices_tomorrow": [],
-                "current_period_start": None,
-                "current_period_end": None,
-            }
+            return {"today": [], "tomorrow": [], "raw_today": [], "raw_tomorrow": []}
         periods_source = price_periods.prices()
         now = dt_util.now().replace(tzinfo=None)
-        current_period = price_periods.get_price_at(now)
         today = now.date()
         tomorrow = today + datetime.timedelta(days=1)
         prices_today: list[dict[str, Any]] = []
         prices_tomorrow: list[dict[str, Any]] = []
+        price_only_today: list[float] = []
+        price_only_tomorrow: list[float] = []
         for period in periods_source:
-            start_dt = period.start_date
+            start_dt_local = period.start_date
+            end_dt_local = period.end_date
+            # Local ISO strings with offset
+            time_start_str = self._local_iso(start_dt_local)
+            time_end_str = self._local_iso(end_dt_local)
             price = period.price_per_kwh
-            local_date = start_dt.date()
-            time_str = start_dt.isoformat()
-            entry = {"time": time_str, "price": price}
+            local_date = start_dt_local.date()
+            entry = {"start": time_start_str, "end": time_end_str, "value": price}
             if local_date == today:
                 prices_today.append(entry)
+                price_only_today.append(price)
             elif local_date == tomorrow:
                 prices_tomorrow.append(entry)
-        prices_today.sort(key=lambda x: x["time"])
-        prices_tomorrow.sort(key=lambda x: x["time"])
+                price_only_tomorrow.append(price)
         return {
-            "prices_today": prices_today,
-            "prices_tomorrow": prices_tomorrow,
-            "current_period_start": current_period.start_date.isoformat()
-            if current_period
-            else None,
-            "current_period_end": current_period.end_date.isoformat()
-            if current_period
-            else None,
+            "today": price_only_today,
+            "tomorrow": price_only_tomorrow,
+            "raw_today": prices_today,
+            "raw_tomorrow": prices_tomorrow,
         }
