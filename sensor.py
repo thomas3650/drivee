@@ -264,18 +264,22 @@ class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEn
         """Initialize the price sensor."""
         super().__init__(coordinator)
 
-    @staticmethod
-    def _local_iso(dt_obj: datetime.datetime | None) -> str | None:
+    def _local_iso(self, dt_obj: datetime.datetime | None) -> str | None:
         if dt_obj is None:
             return None
-        default_tz = dt_util.DEFAULT_TIME_ZONE
-        time = dt_obj.now(datetime.UTC)
-        if time.tzinfo is None:
-            time = time.replace(tzinfo=default_tz)
+        local_tz = dt_util.DEFAULT_TIME_ZONE  # Copenhagen local timezone
+        _LOGGER.info("original (provider) datetime %s", dt_obj.isoformat())
+        # Normalize to local timezone
+        if dt_obj.tzinfo is None:
+            local_dt = dt_obj.replace(tzinfo=local_tz)
+            # Provider sends times one hour ahead in winter (standard time, UTC+01:00)
+            if not local_dt.dst():  # Standard time (no DST offset)
+                local_dt = local_dt - datetime.timedelta(hours=1)
+                _LOGGER.info("adjusted winter local datetime %s", local_dt.isoformat())
         else:
-            time = time.astimezone(default_tz)
-
-        return time.isoformat()
+            local_dt = dt_obj.astimezone(local_tz)
+        _LOGGER.info("final local datetime %s", local_dt.isoformat())
+        return local_dt.isoformat()
 
     @property
     def native_value(self) -> float | None:
