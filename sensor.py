@@ -38,8 +38,44 @@ async def async_setup_entry(
             DriveeSessionEnergySensor(coordinator),
             DriveeSessionCostSensor(coordinator),
             DriveePriceSensor(coordinator),
+            DriveeChargingStatusSensor(coordinator),
         ]
     )
+
+
+class DriveeChargingStatusSensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
+):
+    """Sensor for the Drivee charging status."""
+
+    __slots__ = ()
+    _attr_has_entity_name: bool = True
+    _attr_translation_key: str = "charging_status"
+    _attr_icon: str = "mdi:ev-station"
+    _attr_unique_id: str = "charging_status"
+    _attr_device_class = None  # Plain text, no device class
+    _attr_name = None
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the Drivee charging status sensor."""
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the status of the charge point, or None if unavailable."""
+        charge_point = getattr(self.coordinator.data, "charge_point", None)
+        evse = getattr(charge_point, "evse", None) if charge_point else None
+        status = getattr(evse, "status", None) if evse else None
+        if status is not None and hasattr(status, "value"):
+            return status.value
+        return status
+
+    @property
+    def available(self) -> bool:
+        """Return True if charge point status data is present."""
+        charge_point = getattr(self.coordinator.data, "charge_point", None)
+        evse = getattr(charge_point, "evse", None) if charge_point else None
+        return evse is not None
 
 
 class DriveeChargePointNameSensor(

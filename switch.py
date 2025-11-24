@@ -54,7 +54,7 @@ class DriveeChargingSwitch(
     def is_on(self) -> bool | None:
         """Return true if charging is active."""
         data = self.coordinator.data
-        return data.charge_point.evse.is_charging
+        return data.charge_point.evse.is_charging_session_active
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""

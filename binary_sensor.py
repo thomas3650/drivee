@@ -25,6 +25,7 @@ async def async_setup_entry(
     """Set up Drivee binary sensors."""
     coordinator: DriveeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([DriveeEvseConnectedBinarySensor(coordinator)])
+    async_add_entities([DriveeChargingBinarySensor(coordinator)])
 
 
 class DriveeEvseConnectedBinarySensor(
@@ -63,3 +64,34 @@ class DriveeEvseConnectedBinarySensor(
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra attributes (currently none, placeholder for future)."""
         return {}
+
+
+class DriveeChargingBinarySensor(
+    CoordinatorEntity[DriveeDataUpdateCoordinator], BinarySensorEntity
+):
+    """Sensor for the Drivee charging."""
+
+    __slots__ = ()
+    _attr_has_entity_name: bool = True
+    _attr_translation_key: str = "charging_active"
+    _attr_icon: str = "mdi:ev-station"
+    _attr_unique_id: str = "charging_active"
+    _attr_device_class = None  # Plain text, no device class
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the Drivee charging sensor."""
+        super().__init__(coordinator)
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return the charging status of the charge point, or None if unavailable."""
+        charge_point = getattr(self.coordinator.data, "charge_point", None)
+        evse = getattr(charge_point, "evse", None) if charge_point else None
+        return getattr(evse, "is_charging", None) if evse else None
+
+    @property
+    def available(self) -> bool:
+        """Return True if charge point status data is present."""
+        charge_point = getattr(self.coordinator.data, "charge_point", None)
+        evse = getattr(charge_point, "evse", None) if charge_point else None
+        return evse is not None
