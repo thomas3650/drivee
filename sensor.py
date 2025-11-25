@@ -7,7 +7,9 @@ from decimal import Decimal
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from drivee_client.models.price_periods import PricePeriods
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
@@ -344,32 +346,65 @@ class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEn
         price_periods = getattr(data, "price_periods", None) if data else None
         if not price_periods:
             return {"today": [], "tomorrow": [], "raw_today": [], "raw_tomorrow": []}
-        periods_source = price_periods.prices()
-        now = dt_util.now().replace(tzinfo=None)
-        today = now.date()
-        tomorrow = today + datetime.timedelta(days=1)
         prices_today: list[dict[str, Any]] = []
         prices_tomorrow: list[dict[str, Any]] = []
         price_only_today: list[float] = []
         price_only_tomorrow: list[float] = []
-        for period in periods_source:
-            start_dt_local = period.start_date
-            end_dt_local = period.end_date
-            # Local ISO strings with offset
-            time_start_str = self._local_iso(start_dt_local)
-            time_end_str = self._local_iso(end_dt_local)
-            price = period.price_per_kwh
-            local_date = start_dt_local.date()
-            entry = {"start": time_start_str, "end": time_end_str, "value": price}
-            if local_date == today:
-                prices_today.append(entry)
-                price_only_today.append(price)
-            elif local_date == tomorrow:
-                prices_tomorrow.append(entry)
-                price_only_tomorrow.append(price)
+        interval_minutes = 15
+        timesToday = [
+            (
+                datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0))
+                + datetime.timedelta(minutes=i)
+            )
+            for i in range(0, 24 * 60, interval_minutes)
+        ]
+        timesTomorrow = [
+            (
+                datetime.datetime.combine(
+                    datetime.date.today() + datetime.timedelta(days=1),
+                    datetime.time(0, 0),
+                )
+                + datetime.timedelta(minutes=i)
+            )
+            for i in range(0, 24 * 60, interval_minutes)
+        ]
+        for today_time in timesToday:
+            entry = self._get_or_create_price_entry(
+                price_periods, today_time, interval_minutes
+            )
+            prices_today.append(entry)
+            price_only_today.append(entry["value"])
+
+        for tomorrow_time in timesTomorrow:
+            entry = self._get_or_create_price_entry(
+                price_periods, tomorrow_time, interval_minutes
+            )
+            prices_tomorrow.append(entry)
+            price_only_tomorrow.append(entry["value"])
+
         return {
             "today": price_only_today,
             "tomorrow": price_only_tomorrow,
             "raw_today": prices_today,
             "raw_tomorrow": prices_tomorrow,
         }
+
+    def _get_or_create_price_entry(
+        self,
+        price_periods: PricePeriods,
+        date: datetime.datetime,
+        interval_minutes: int,
+    ) -> dict[str, Any]:
+        """Return a dict entry and price for the given time, creating a zero-price period if missing."""
+        period = price_periods.get_price_at(date)
+        if period is not None:
+            start_dt_local = period.start_date
+            end_dt_local = period.end_date
+            price = period.price_per_kwh
+        else:
+            start_dt_local = date
+            end_dt_local = start_dt_local + datetime.timedelta(minutes=interval_minutes)
+            price = 0.0
+        time_start_str = self._local_iso(start_dt_local)
+        time_end_str = self._local_iso(end_dt_local)
+        return {"start": time_start_str, "end": time_end_str, "value": price}
