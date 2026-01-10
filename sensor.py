@@ -9,7 +9,11 @@ from typing import Any
 
 from drivee_client.models.price_periods import PricePeriods
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
@@ -89,13 +93,6 @@ class DriveeChargingStatusSensor(DriveeBaseSensorEntity):
             return status.value
         return status
 
-    @property
-    def available(self) -> bool:
-        """Return True if charge point status data is present."""
-        charge_point = getattr(self.coordinator.data, "charge_point", None)
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return evse is not None
-
 
 class DriveeChargePointNameSensor(DriveeBaseSensorEntity):
     """Sensor for the Drivee charge point name."""
@@ -117,12 +114,6 @@ class DriveeChargePointNameSensor(DriveeBaseSensorEntity):
         """Return the name of the charge point, or None if unavailable."""
         charge_point = getattr(self.coordinator.data, "charge_point", None)
         return getattr(charge_point, "name", None) if charge_point else None
-
-    @property
-    def available(self) -> bool:
-        """Return True if charge point name data is present."""
-        charge_point = getattr(self.coordinator.data, "charge_point", None)
-        return bool(getattr(charge_point, "name", None))
 
 
 class DriveeEVSEConnectedSensor(DriveeBaseSensorEntity):
@@ -146,14 +137,6 @@ class DriveeEVSEConnectedSensor(DriveeBaseSensorEntity):
         """Initialize the Drivee EVSE connected sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = self._make_unique_id("connected")
-
-    @property
-    def available(self) -> bool:
-        """Return availability based on presence of EVSE connection data."""
-        data = self.coordinator.data
-        charge_point = getattr(data, "charge_point", None) if data else None
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return evse is not None
 
     @property
     def native_value(self) -> bool | None:
@@ -208,13 +191,12 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.WATT_HOUR
     _attr_name = "Total Energy"
-    _attr_state_class = "total"
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the total energy sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = self._make_unique_id("total_energy")
-        self._attr_native_value = None  # Total kWh excluding current session
         # Info about last finished session
         self._last_finished_session_end: datetime.datetime | None = None
         self._total: float = 0.0
@@ -224,12 +206,6 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
         # Restore first, then subscribe to coordinator updates
         last_state = await self.async_get_last_state()
         if last_state:
-            # try:
-            #     if last_state.state not in (None, "unknown", "unavailable"):
-            #         self._attr_native_value = float(last_state.state)
-            # except (ValueError, TypeError):
-            #     pass
-            # Restore attributes
             attrs = last_state.attributes or {}
             restored_end = attrs.get("last_finished_session_end")
             self._total = attrs.get("total", float(0))
@@ -272,7 +248,7 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
         if data is None:
             return
 
-        total_energy_raw = self._attr_native_value
+        total_energy_raw = self._total
         total_wh: float = 0.0
         if isinstance(total_energy_raw, (int, float, Decimal)):
             total_wh = float(total_energy_raw)
@@ -290,25 +266,19 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return stored total kWh excluding current session."""
+        """Return stored total Wh excluding current session."""
         total_energy_raw = self._total
-        total_kwh: float = 0.0
+        total_wh: float = 0.0
         if isinstance(total_energy_raw, (int, float, Decimal)):
-            total_kwh = float(total_energy_raw)
+            total_wh = float(total_energy_raw)
 
         session = self._get_current_session()
         if session is not None:
             session_wh = getattr(session, "energy", None)
             if isinstance(session_wh, (int, float, Decimal)):
-                total_kwh += float(session_wh)
+                total_wh += float(session_wh)
 
-        return total_kwh
-
-    @property
-    def available(self) -> bool:
-        """Return True if charge point name data is present."""
-        charge_point = getattr(self.coordinator.data, "charge_point", None)
-        return charge_point is not None
+        return total_wh
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
