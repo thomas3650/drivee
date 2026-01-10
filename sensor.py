@@ -45,9 +45,34 @@ async def async_setup_entry(
     )
 
 
-class DriveeChargingStatusSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
+class DriveeBaseSensorEntity(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity):
+    """Base entity to ensure sensors are grouped under a single device."""
+
+    __slots__ = ()
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """Return device information so HA groups all sensors under one device."""
+        data = getattr(self.coordinator, "data", None)
+        charge_point = getattr(data, "charge_point", None) if data else None
+        # Prefer a stable identifier from the charge point, fallback to config entry id
+        cp_id = getattr(charge_point, "id", None) or self.coordinator.config_entry.entry_id
+        manufacturer = "Drivee"
+        # Try to get a model name if available
+        model = getattr(charge_point, "model", None)
+        if not model:
+            evse = getattr(charge_point, "evse", None) if charge_point else None
+            model = getattr(evse, "model", None) if evse else None
+        name = getattr(charge_point, "name", None) or "Drivee Charger"
+        return {
+            "identifiers": {(DOMAIN, str(cp_id))},
+            "manufacturer": manufacturer,
+            "model": model,
+            "name": name,
+        }
+
+
+class DriveeChargingStatusSensor(DriveeBaseSensorEntity):
     """Sensor for the Drivee charging status."""
 
     __slots__ = ()
@@ -80,9 +105,7 @@ class DriveeChargingStatusSensor(
         return evse is not None
 
 
-class DriveeChargePointNameSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
+class DriveeChargePointNameSensor(DriveeBaseSensorEntity):
     """Sensor for the Drivee charge point name."""
 
     __slots__ = ()
@@ -110,9 +133,7 @@ class DriveeChargePointNameSensor(
         return bool(getattr(charge_point, "name", None))
 
 
-class DriveeEVSEConnectedSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
+class DriveeEVSEConnectedSensor(DriveeBaseSensorEntity):
     """Sensor indicating if the EVSE is currently connected.
 
     This should ideally be a binary sensor (connectivity); kept as a regular
@@ -151,9 +172,7 @@ class DriveeEVSEConnectedSensor(
         return getattr(evse, "is_connected", None) if evse else None
 
 
-class DriveeSessionEnergySensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
+class DriveeSessionEnergySensor(DriveeBaseSensorEntity):
     """Sensor for the current or last charging session energy."""
 
     __slots__ = ()
@@ -186,9 +205,7 @@ class DriveeSessionEnergySensor(
         return bool(data and getattr(data, "last_session", None))
 
 
-class DriveeSessionCostSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
+class DriveeSessionCostSensor(DriveeBaseSensorEntity):
     """Sensor for the current session cost."""
 
     __slots__ = ()
@@ -219,9 +236,7 @@ class DriveeSessionCostSensor(
         return bool(data and getattr(data.charge_point.evse, "session", None))
 
 
-class DriveeLastChargingSessionSensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity
-):
+class DriveeLastChargingSessionSensor(DriveeBaseSensorEntity):
     """Sensor for displaying the last charging session information."""
 
     __slots__ = ()
@@ -284,7 +299,7 @@ class DriveeLastChargingSessionSensor(
         }
 
 
-class DriveePriceSensor(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity):
+class DriveePriceSensor(DriveeBaseSensorEntity):
     """Sensor for displaying the current price information from Drivee."""
 
     __slots__ = ()
