@@ -50,6 +50,17 @@ class DriveeBaseSensorEntity(CoordinatorEntity[DriveeDataUpdateCoordinator], Sen
 
     __slots__ = ()
 
+    def _get_cp_id(self) -> str:
+        """Return a stable charge point id fallback to config entry id."""
+        data = getattr(self.coordinator, "data", None)
+        charge_point = getattr(data, "charge_point", None) if data else None
+        cp_id = getattr(charge_point, "id", None) or self.coordinator.config_entry.entry_id
+        return str(cp_id)
+
+    def _make_unique_id(self, suffix: str) -> str:
+        """Build a device-scoped unique_id for the entity."""
+        return f"{self._get_cp_id()}_{suffix}"
+
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device information so HA groups all sensors under one device."""
@@ -79,13 +90,13 @@ class DriveeChargingStatusSensor(DriveeBaseSensorEntity):
     _attr_has_entity_name: bool = True
     _attr_translation_key: str = "charging_status"
     _attr_icon: str = "mdi:ev-station"
-    _attr_unique_id: str = "charging_status"
     _attr_device_class = None  # Plain text, no device class
-    _attr_name = None
+    _attr_name = "Charging Status"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee charging status sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("charging_status")
 
     @property
     def native_value(self) -> str | None:
@@ -112,13 +123,13 @@ class DriveeChargePointNameSensor(DriveeBaseSensorEntity):
     _attr_has_entity_name: bool = True
     _attr_translation_key: str = "charge_point_name"
     _attr_icon: str = "mdi:ev-station"
-    _attr_unique_id: str = "name"
     _attr_device_class = None  # Plain text, no device class
-    _attr_name = None
+    _attr_name = "Charge Point Name"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee charge point name sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("name")
 
     @property
     def native_value(self) -> str | None:
@@ -145,15 +156,15 @@ class DriveeEVSEConnectedSensor(DriveeBaseSensorEntity):
     _attr_has_entity_name: bool = True
     _attr_translation_key: str = "connected"
     _attr_icon: str = "mdi:ev-station"
-    _attr_unique_id: str = "connected"
     _attr_device_class = (
         None  # Would be BinarySensorDeviceClass.CONNECTIVITY if migrated
     )
-    _attr_name = None
+    _attr_name = "EVSE Connected"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the Drivee EVSE connected sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("connected")
 
     @property
     def available(self) -> bool:
@@ -179,14 +190,15 @@ class DriveeSessionEnergySensor(DriveeBaseSensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "last_session_energy"
     _attr_icon = "mdi:battery-charging-50"
-    _attr_unique_id = "last_session_energy"
+
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
-    _attr_name = None
+    _attr_name = "Last Session Energy"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("last_session_energy")
 
     @property
     def native_value(self) -> float | None:
@@ -212,14 +224,15 @@ class DriveeSessionCostSensor(DriveeBaseSensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "session_cost"
     _attr_icon = "mdi:cash-100"
-    _attr_unique_id = "session_cost"
+
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = "kr"
-    _attr_name = None
+    _attr_name = "Session Cost"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("session_cost")
 
     @property
     def native_value(self) -> Decimal | None:
@@ -242,8 +255,7 @@ class DriveeLastChargingSessionSensor(DriveeBaseSensorEntity):
     __slots__ = ()
     _attr_has_entity_name = True
     _attr_translation_key = "last_session"
-    _attr_name = None
-    _attr_unique_id = "last_session"
+    _attr_name = "Last Session"
     _attr_native_value = None
     _attr_icon = "mdi:history"
     _attr_extra_state_attributes: dict[str, Any] = {}
@@ -251,6 +263,7 @@ class DriveeLastChargingSessionSensor(DriveeBaseSensorEntity):
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("last_session")
 
     @property
     def native_value(self) -> float | None:
@@ -305,17 +318,17 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
     __slots__ = ()
     _attr_has_entity_name: bool = True
     _attr_translation_key: str = "current_price"
-    _attr_unique_id: str = "current_price"
     _attr_icon: str = "mdi:currency-usd"
     _attr_device_class: str | None = None  # No standard device class for price
     _attr_native_unit_of_measurement: str = "kr/kWh"
     _attr_suggested_display_precision: int = 2
-    _attr_name: str | None = None
+    _attr_name: str | None = "Current Price"
     _attr_entity_category: str | None = None
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the price sensor."""
         super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("current_price")
 
     def _local_iso(self, dt_obj: datetime.datetime | None) -> str | None:
         if dt_obj is None:
