@@ -14,11 +14,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
+from .entity import DriveeBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ async def async_setup_entry(
             DriveeChargePointNameSensor(coordinator),
             DriveeLastChargingSessionSensor(coordinator),
             DriveeSessionEnergySensor(coordinator),
+            DriveeTotalEnergySensor(coordinator),
             DriveeSessionCostSensor(coordinator),
             DriveePriceSensor(coordinator),
             DriveeChargingStatusSensor(coordinator),
@@ -45,42 +47,21 @@ async def async_setup_entry(
     )
 
 
-class DriveeBaseSensorEntity(CoordinatorEntity[DriveeDataUpdateCoordinator], SensorEntity):
-    """Base entity to ensure sensors are grouped under a single device."""
+class DriveeBaseSensorEntity(DriveeBaseEntity, SensorEntity):
+    """Base sensor entity to ensure sensors are grouped under a single device.
+
+    This class is specific to the sensor platform but shares the generic
+    base entity with other platforms (e.g., switch).
+    """
 
     __slots__ = ()
 
-    def _get_cp_id(self) -> str:
-        """Return a stable charge point id fallback to config entry id."""
-        data = getattr(self.coordinator, "data", None)
-        charge_point = getattr(data, "charge_point", None) if data else None
-        cp_id = getattr(charge_point, "id", None) or self.coordinator.config_entry.entry_id
-        return str(cp_id)
-
-    def _make_unique_id(self, suffix: str) -> str:
-        """Build a device-scoped unique_id for the entity."""
-        return f"{self._get_cp_id()}_{suffix}"
-
     @property
-    def device_info(self) -> dict[str, Any]:
-        """Return device information so HA groups all sensors under one device."""
-        data = getattr(self.coordinator, "data", None)
-        charge_point = getattr(data, "charge_point", None) if data else None
-        # Prefer a stable identifier from the charge point, fallback to config entry id
-        cp_id = getattr(charge_point, "id", None) or self.coordinator.config_entry.entry_id
-        manufacturer = "Drivee"
-        # Try to get a model name if available
-        model = getattr(charge_point, "model", None)
-        if not model:
-            evse = getattr(charge_point, "evse", None) if charge_point else None
-            model = getattr(evse, "model", None) if evse else None
-        name = getattr(charge_point, "name", None) or "Drivee Charger"
-        return {
-            "identifiers": {(DOMAIN, str(cp_id))},
-            "manufacturer": manufacturer,
-            "model": model,
-            "name": name,
-        }
+    def available(self) -> bool:
+        """Return True if charge point status data is present."""
+        charge_point = getattr(self.coordinator.data, "charge_point", None)
+        evse = getattr(charge_point, "evse", None) if charge_point else None
+        return evse is not None
 
 
 class DriveeChargingStatusSensor(DriveeBaseSensorEntity):
@@ -217,6 +198,131 @@ class DriveeSessionEnergySensor(DriveeBaseSensorEntity):
         return bool(data and getattr(data, "last_session", None))
 
 
+class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
+    """Sensor for the total energy charged across all sessions."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = "total_energy"
+    _attr_icon = "mdi:counter"
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_native_unit_of_measurement = UnitOfEnergy.WATT_HOUR
+    _attr_name = "Total Energy"
+    _attr_state_class = "total"
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the total energy sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("total_energy")
+        self._attr_native_value = None  # Total kWh excluding current session
+        # Info about last finished session
+        self._last_finished_session_end: datetime.datetime | None = None
+        self._total: float = 0.0
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last known total and last finished session on restart."""
+        # Restore first, then subscribe to coordinator updates
+        last_state = await self.async_get_last_state()
+        if last_state:
+            # try:
+            #     if last_state.state not in (None, "unknown", "unavailable"):
+            #         self._attr_native_value = float(last_state.state)
+            # except (ValueError, TypeError):
+            #     pass
+            # Restore attributes
+            attrs = last_state.attributes or {}
+            restored_end = attrs.get("last_finished_session_end")
+            self._total = attrs.get("total", float(0))
+            if isinstance(restored_end, str):
+                parsed = dt_util.parse_datetime(restored_end)
+                self._last_finished_session_end = parsed
+            elif isinstance(restored_end, datetime.datetime):
+                self._last_finished_session_end = restored_end
+            else:
+                self._last_finished_session_end = None
+
+        await super().async_added_to_hass()
+
+        # Subscribe explicitly to coordinator updates and process once immediately
+        self.async_on_remove(self.coordinator.async_add_listener(self._process_update))
+        self._process_update()
+
+    def _process_update(self) -> None:
+        """Handle coordinator updates and write state."""
+        self._on_session_end_update_total()
+        self.async_write_ha_state()
+
+    def _get_current_session(self):
+        data = self.coordinator.data
+        return (
+            getattr(
+                getattr(getattr(data, "charge_point", None), "evse", None),
+                "session",
+                None,
+            )
+            if data
+            else None
+        )
+
+    def _on_session_end_update_total(self) -> None:
+        """When the session ends, add its energy to the stored total and record details."""
+        # Only proceed if we had a session previously
+
+        data = self._get_data()
+        if data is None:
+            return
+
+        total_energy_raw = self._attr_native_value
+        total_wh: float = 0.0
+        if isinstance(total_energy_raw, (int, float, Decimal)):
+            total_wh = float(total_energy_raw)
+
+        if self._last_finished_session_end is None:
+            for session in data.charging_history.sessions:
+                total_wh += float(session.energy)
+                self._last_finished_session_end = session.started_at
+        else:
+            for session in data.charging_history.sessions:
+                if session.started_at > self._last_finished_session_end:
+                    total_wh += float(session.energy)
+                    self._last_finished_session_end = session.started_at
+        self._total = total_wh
+
+    @property
+    def native_value(self) -> float | None:
+        """Return stored total kWh excluding current session."""
+        total_energy_raw = self._total
+        total_kwh: float = 0.0
+        if isinstance(total_energy_raw, (int, float, Decimal)):
+            total_kwh = float(total_energy_raw)
+
+        session = self._get_current_session()
+        if session is not None:
+            session_wh = getattr(session, "energy", None)
+            if isinstance(session_wh, (int, float, Decimal)):
+                total_kwh += float(session_wh)
+
+        return total_kwh
+
+    @property
+    def available(self) -> bool:
+        """Return True if charge point name data is present."""
+        charge_point = getattr(self.coordinator.data, "charge_point", None)
+        return charge_point is not None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose last finished session context and current session id."""
+        return {
+            "last_finished_session_end": (
+                self._last_finished_session_end.isoformat()
+                if isinstance(self._last_finished_session_end, datetime.datetime)
+                else None
+            ),
+            "total": self._total,
+        }
+
+
 class DriveeSessionCostSensor(DriveeBaseSensorEntity):
     """Sensor for the current session cost."""
 
@@ -334,17 +440,17 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         if dt_obj is None:
             return None
         local_tz = dt_util.DEFAULT_TIME_ZONE  # Copenhagen local timezone
-        _LOGGER.info("original (provider) datetime %s", dt_obj.isoformat())
+        _LOGGER.debug("original (provider) datetime %s", dt_obj.isoformat())
         # Normalize to local timezone
         if dt_obj.tzinfo is None:
             local_dt = dt_obj.replace(tzinfo=local_tz)
             # Provider sends times one hour ahead in winter (standard time, UTC+01:00)
             if not local_dt.dst():  # Standard time (no DST offset)
                 local_dt = local_dt - datetime.timedelta(hours=1)
-                _LOGGER.info("adjusted winter local datetime %s", local_dt.isoformat())
+                _LOGGER.debug("adjusted winter local datetime %s", local_dt.isoformat())
         else:
             local_dt = dt_obj.astimezone(local_tz)
-        _LOGGER.info("final local datetime %s", local_dt.isoformat())
+        _LOGGER.debug("final local datetime %s", local_dt.isoformat())
         return local_dt.isoformat()
 
     @property
@@ -398,14 +504,14 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         ]
         for today_time in timesToday:
             entry = self._get_or_create_price_entry(
-                price_periods, today_time, interval_minutes
+                price_periods, today_time, interval_minutes, False
             )
             prices_today.append(entry)
             price_only_today.append(entry["value"])
 
         for tomorrow_time in timesTomorrow:
             entry = self._get_or_create_price_entry(
-                price_periods, tomorrow_time, interval_minutes
+                price_periods, tomorrow_time, interval_minutes, True
             )
             prices_tomorrow.append(entry)
             price_only_tomorrow.append(entry["value"])
@@ -422,6 +528,7 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         price_periods: PricePeriods,
         date: datetime.datetime,
         interval_minutes: int,
+        tomorrow: bool,
     ) -> dict[str, Any]:
         """Return a dict entry and price for the given time, creating a zero-price period if missing."""
         period = price_periods.get_price_at(date)
@@ -432,7 +539,7 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         else:
             start_dt_local = date
             end_dt_local = start_dt_local + datetime.timedelta(minutes=interval_minutes)
-            price = 0.0
+            price = 10.0 if tomorrow else 0.0
         time_start_str = self._local_iso(start_dt_local)
         time_end_str = self._local_iso(end_dt_local)
         return {"start": time_start_str, "end": time_end_str, "value": price}
