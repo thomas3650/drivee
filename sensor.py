@@ -47,6 +47,7 @@ async def async_setup_entry(
             DriveeSessionCostSensor(coordinator),
             DriveePriceSensor(coordinator),
             DriveeChargingStatusSensor(coordinator),
+            DriveeLastRefreshSensor(coordinator),
         ]
     )
 
@@ -253,15 +254,21 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
         if isinstance(total_energy_raw, (int, float, Decimal)):
             total_wh = float(total_energy_raw)
 
+        sessions_ordered = sorted(
+            data.charging_history.sessions, key=lambda s: s.started_at, reverse=True
+        )
         if self._last_finished_session_end is None:
-            for session in data.charging_history.sessions:
+            for session in sessions_ordered:
                 total_wh += float(session.energy)
                 self._last_finished_session_end = session.started_at
         else:
-            for session in data.charging_history.sessions:
-                if session.started_at > self._last_finished_session_end:
+            for session in sessions_ordered:
+                if (
+                    session.stopped_at is not None
+                    and session.stopped_at > self._last_finished_session_end
+                ):
                     total_wh += float(session.energy)
-                    self._last_finished_session_end = session.started_at
+                    self._last_finished_session_end = session.stopped_at
         self._total = total_wh
 
     @property
@@ -513,3 +520,29 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         time_start_str = self._local_iso(start_dt_local)
         time_end_str = self._local_iso(end_dt_local)
         return {"start": time_start_str, "end": time_end_str, "value": price}
+
+
+class DriveeLastRefreshSensor(DriveeBaseSensorEntity):
+    """Sensor showing the last time data was refreshed."""
+
+    __slots__ = ()
+    _attr_has_entity_name = True
+    _attr_translation_key = "last_refresh"
+    _attr_icon = "mdi:update"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_name = "Last refresh"
+
+    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = self._make_unique_id("last_refresh")
+
+    @property
+    def native_value(self) -> datetime.datetime | None:
+        """Return the time of the last successful refresh."""
+        return getattr(self.coordinator, "last_update_success_time", None)
+
+    @property
+    def available(self) -> bool:
+        """Return True if we have at least one successful refresh."""
+        return getattr(self.coordinator, "last_update_success_time", None) is not None
