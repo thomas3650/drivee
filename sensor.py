@@ -31,10 +31,6 @@ from .entity import DriveeBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-# Global prefix for translation keys
-TRANSLATION_KEY_PREFIX = "drivee_sensor"
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,

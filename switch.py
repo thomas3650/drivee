@@ -18,8 +18,6 @@ from .coordinator import DriveeDataUpdateCoordinator
 from .entity import DriveeBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
-TRANSLATION_KEY_PREFIX = "drivee_switch"
-
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -37,6 +35,7 @@ class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
     _attr_icon = "mdi:ev-station"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_name = "Charging Enabled"
+    _attr_should_poll = False
 
     @property
     def is_on(self) -> bool:
