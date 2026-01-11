@@ -11,10 +11,10 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
+from .entity import DriveeBaseEntity
 
 
 async def async_setup_entry(
@@ -28,9 +28,7 @@ async def async_setup_entry(
     async_add_entities([DriveeChargingBinarySensor(coordinator)])
 
 
-class DriveeEvseConnectedBinarySensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], BinarySensorEntity
-):
+class DriveeEvseConnectedBinarySensor(DriveeBaseEntity, BinarySensorEntity):
     """Binary sensor indicating if the EVSE is connected."""
 
     __slots__ = ()
@@ -38,37 +36,22 @@ class DriveeEvseConnectedBinarySensor(
     _attr_translation_key = "evse_connected"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_unique_id = "evse_connected"
-    _attr_name = None
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize EVSE connectivity binary sensor."""
-        super().__init__(coordinator)
+    _attr_name = "Connected"
 
     @property
-    def is_on(self) -> bool | None:
+    def is_on(self) -> bool:
         """Return True if EVSE is connected, False if not, or None if unknown."""
-        data = self.coordinator.data
-        charge_point = getattr(data, "charge_point", None) if data else None
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return getattr(evse, "is_connected", None) if evse else None
+        charge_point = self._get_charge_point()
+        return charge_point.evse.is_connected
 
     @property
     def available(self) -> bool:
         """Return availability based on presence of EVSE connection data."""
-        data = self.coordinator.data
-        charge_point = getattr(data, "charge_point", None) if data else None
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return evse is not None
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra attributes (currently none, placeholder for future)."""
-        return {}
+        charge_point = self._get_charge_point()
+        return charge_point.evse is not None
 
 
-class DriveeChargingBinarySensor(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], BinarySensorEntity
-):
+class DriveeChargingBinarySensor(DriveeBaseEntity, BinarySensorEntity):
     """Sensor for the Drivee charging."""
 
     __slots__ = ()
@@ -76,22 +59,17 @@ class DriveeChargingBinarySensor(
     _attr_translation_key: str = "charging_active"
     _attr_icon: str = "mdi:ev-station"
     _attr_unique_id: str = "charging_active"
-    _attr_device_class = None  # Plain text, no device class
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the Drivee charging sensor."""
-        super().__init__(coordinator)
+    _attr_name: str = "Charging Active"
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     @property
-    def is_on(self) -> bool | None:
-        """Return the charging status of the charge point, or None if unavailable."""
-        charge_point = getattr(self.coordinator.data, "charge_point", None)
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return getattr(evse, "is_charging", None) if evse else None
+    def is_on(self) -> bool:
+        """Return the charging status of the charge point."""
+        charge_point = self._get_charge_point()
+        return charge_point.evse.is_charging
 
     @property
     def available(self) -> bool:
         """Return True if charge point status data is present."""
-        charge_point = getattr(self.coordinator.data, "charge_point", None)
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return evse is not None
+        charge_point = self._get_charge_point()
+        return charge_point.evse is not None

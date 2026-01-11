@@ -5,20 +5,19 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from drivee_client.errors import DriveeError
+
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
-from drivee_client.errors import DriveeError
+from .entity import DriveeBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
-TRANSLATION_KEY_PREFIX = "drivee_switch"
-
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -28,33 +27,26 @@ async def async_setup_entry(
     async_add_entities([DriveeChargingSwitch(coordinator)])
 
 
-class DriveeChargingSwitch(
-    CoordinatorEntity[DriveeDataUpdateCoordinator], SwitchEntity
-):
-    """Representation of a Drivee charging switch.
-
-    Note: Pylance may report a type conflict for 'available' due to multiple inheritance
-    (Entity uses cached_property, CoordinatorEntity uses property). This is a known
-    Home Assistant quirk and can be safely ignored unless you override 'available'.
-    """
+class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
+    """Representation of a Drivee charging switch."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "Charging"
+    _attr_translation_key = "charging_enabled"
     _attr_icon = "mdi:ev-station"
-    _attr_unique_id = "Charging"
-    _attr_entity_category = (
-        EntityCategory.CONFIG
-    )  # Set to CONFIG or None as appropriate
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the switch."""
-        super().__init__(coordinator)
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_name = "Charging Enabled"
+    _attr_should_poll = False
 
     @property
-    def is_on(self) -> bool | None:
+    def is_on(self) -> bool:
         """Return true if charging is active."""
-        data = self.coordinator.data
-        return data.charge_point.evse.is_charging_session_active
+        charge_point = self._get_charge_point()
+        return charge_point.evse.is_charging_session_active
+
+    @property
+    def available(self) -> bool:
+        """Return True if charge point data is present."""
+        return self._get_charge_point() is not None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""
