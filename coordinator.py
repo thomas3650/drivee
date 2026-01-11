@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import datetime
+from datetime import timedelta
 import logging
 import time
-from dataclasses import dataclass
-from datetime import timedelta
-
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
 
 from drivee_client import DriveeClient
 from drivee_client.models.charge_point import ChargePoint
 from drivee_client.models.charging_history import ChargingHistory
 from drivee_client.models.charging_session import ChargingSession
 from drivee_client.models.price_periods import PricePeriods
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 

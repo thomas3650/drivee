@@ -30,11 +30,7 @@ class DriveeForceRefreshButton(DriveeBaseEntity, ButtonEntity):
     _attr_translation_key = "force_refresh"
     _attr_icon = "mdi:refresh"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the button."""
-        super().__init__(coordinator)
-        self._attr_unique_id = self._make_unique_id("force_refresh")
+    _attr_name = "Force Refresh"
 
     async def async_press(self) -> None:
         """Handle the button press."""

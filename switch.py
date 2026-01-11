@@ -33,28 +33,21 @@ class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
     """Representation of a Drivee charging switch."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "charging"
+    _attr_translation_key = "charging_enabled"
     _attr_icon = "mdi:ev-station"
     _attr_entity_category = EntityCategory.CONFIG
-
-    def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
-        """Initialize the switch."""
-        super().__init__(coordinator)
-        self._attr_unique_id = self._make_unique_id("charging")
+    _attr_name = "Charging Enabled"
 
     @property
-    def is_on(self) -> bool | None:
+    def is_on(self) -> bool:
         """Return true if charging is active."""
-        data = self.coordinator.data
-        charge_point = getattr(data, "charge_point", None) if data else None
-        evse = getattr(charge_point, "evse", None) if charge_point else None
-        return getattr(evse, "is_charging_session_active", None) if evse else None
+        charge_point = self._get_charge_point()
+        return charge_point.evse.is_charging_session_active
 
     @property
     def available(self) -> bool:
         """Return True if charge point data is present."""
-        data = self.coordinator.data
-        return bool(getattr(data, "charge_point", None))
+        return self._get_charge_point() is not None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start charging."""
