@@ -31,6 +31,7 @@ from .entity import DriveeBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -153,13 +154,12 @@ class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
         session = self._get_current_session()
         if not session:
             return float(0)
-        return round(float(session.energy) / 1000, 3)
+        return round(float(session.energy) / 1000, 1)
 
-
-@property
-def available(self) -> bool:
-    """Return if the sensor is available."""
-    return True
+    @property
+    def available(self) -> bool:
+        """Return if the sensor is available."""
+        return True
 
 
 class DriveeCurrentSessionCostSensor(DriveeBaseSensorEntity):
@@ -192,20 +192,20 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
     """Sensor for the total energy charged across all sessions."""
 
     __slots__ = ()
-    _attr_has_entity_name = True
+    _attr_has_entity_name: bool = True
     _attr_translation_key = "total_energy"
     _attr_icon = "mdi:counter"
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_native_unit_of_measurement = UnitOfEnergy.WATT_HOUR
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_name = "Total Energy"
-    _attr_state_class = SensorStateClass.TOTAL
+    _attr_suggested_display_precision: int = 1
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:
         """Initialize the total energy sensor."""
         super().__init__(coordinator)
-        # Info about last finished session
         self._last_finished_session_end: datetime.datetime | None = None
-        self._total: float = 0.0
+        self._total_wh: float = 0.0
 
     async def async_added_to_hass(self) -> None:
         """Restore last known total and last finished session on restart."""
@@ -214,13 +214,14 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
         if last_state:
             attrs = last_state.attributes or {}
             restored_end = attrs.get("last_finished_session_end")
-            self._total = attrs.get("total", float(0))
+            self._total_wh = float(attrs.get("_total_wh", 0.0))
             if isinstance(restored_end, str):
                 parsed = dt_util.parse_datetime(restored_end)
                 self._last_finished_session_end = parsed
             elif isinstance(restored_end, datetime.datetime):
                 self._last_finished_session_end = restored_end
             else:
+                self._total_wh = 0.0
                 self._last_finished_session_end = None
 
         await super().async_added_to_hass()
@@ -236,24 +237,20 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
 
     def _on_session_end_update_total(self) -> None:
         """When the session ends, add its energy to the stored total and record details."""
-        # Only proceed if we had a session previously
-
         data = self._get_data()
         if data is None:
             return
 
-        total_energy_raw = self._total
-        total_wh: float = 0.0
-        if isinstance(total_energy_raw, (int, float, Decimal)):
-            total_wh = float(total_energy_raw)
+        total_wh: float = float(self._total_wh)
 
         sessions_ordered = sorted(
-            data.charging_history.sessions, key=lambda s: s.started_at, reverse=True
+            data.charging_history.sessions, key=lambda s: s.started_at, reverse=False
         )
         if self._last_finished_session_end is None:
             for session in sessions_ordered:
+                # session.energy is in Wh; convert to Wh
                 total_wh += float(session.energy)
-                self._last_finished_session_end = session.started_at
+                self._last_finished_session_end = session.stopped_at
         else:
             for session in sessions_ordered:
                 if (
@@ -262,15 +259,12 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
                 ):
                     total_wh += float(session.energy)
                     self._last_finished_session_end = session.stopped_at
-        self._total = total_wh
+        self._total_wh = total_wh
 
     @property
-    def native_value(self) -> float | None:
-        """Return stored total Wh excluding current session."""
-        total_energy_raw = self._total
-        total_wh: float = 0.0
-        if isinstance(total_energy_raw, (int, float, Decimal)):
-            total_wh = float(total_energy_raw)
+    def native_value(self) -> float:
+        """Return stored total Wh including current session energy."""
+        total_wh: float = float(self._total_wh)
 
         session = self._get_current_session()
         if session is not None:
@@ -278,18 +272,19 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
             if isinstance(session_wh, (int, float, Decimal)):
                 total_wh += float(session_wh)
 
-        return total_wh
+        ret = round(total_wh / 1000, 1)
+        return ret
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose last finished session context and current session id."""
+        """Expose last finished session context and current total in Wh."""
         return {
             "last_finished_session_end": (
                 self._last_finished_session_end.isoformat()
                 if isinstance(self._last_finished_session_end, datetime.datetime)
                 else None
             ),
-            "total": self._total,
+            "_total_wh": self._total_wh,
         }
 
 
