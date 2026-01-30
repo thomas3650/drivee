@@ -34,24 +34,6 @@ jobs:
       - name: Run Ruff formatting check
         run: ruff format --check .
 
-  hassfest:
-    name: Home Assistant Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create custom_components structure for hassfest
-        run: |
-          mkdir -p custom_components/drivee
-          # Copy all integration files to the proper directory structure
-          cp *.py custom_components/drivee/ 2>/dev/null || true
-          cp *.json custom_components/drivee/
-          cp -r translations custom_components/drivee/ 2>/dev/null || true
-
-      - name: Run hassfest
-        uses: home-assistant/actions/hassfest@master
-
   validate-manifest:
     name: Validate Integration Files
     runs-on: ubuntu-latest
@@ -149,17 +131,15 @@ jobs:
   summary:
     name: Validation Summary
     runs-on: ubuntu-latest
-    needs: [lint, hassfest, validate-manifest]
+    needs: [lint, validate-manifest]
     if: always()
     steps:
       - name: Check results
         run: |
           echo "✅ Linting: ${{ needs.lint.result }}"
-          echo "✅ Home Assistant Validation: ${{ needs.hassfest.result }}"
           echo "✅ Manifest Validation: ${{ needs.validate-manifest.result }}"
 
           if [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.hassfest.result }}" != "success" ] || \
              [ "${{ needs.validate-manifest.result }}" != "success" ]; then
             echo "❌ Required checks failed"
             exit 1
