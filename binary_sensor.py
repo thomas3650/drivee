@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -35,7 +33,6 @@ class DriveeEvseConnectedBinarySensor(DriveeBaseEntity, BinarySensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "evse_connected"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
-    _attr_unique_id = "evse_connected"
     _attr_name = "Connected"
 
     @property
@@ -58,7 +55,6 @@ class DriveeChargingBinarySensor(DriveeBaseEntity, BinarySensorEntity):
     _attr_has_entity_name: bool = True
     _attr_translation_key: str = "charging_active"
     _attr_icon: str = "mdi:ev-station"
-    _attr_unique_id: str = "charging_active"
     _attr_name: str = "Charging Active"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 

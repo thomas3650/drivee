@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -11,6 +13,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
 from .entity import DriveeBaseEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -34,5 +38,7 @@ class DriveeForceRefreshButton(DriveeBaseEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press."""
+        _LOGGER.debug("Force refresh button pressed")
         # Request an immediate refresh from the coordinator
         await self.coordinator.async_request_refresh()
+        _LOGGER.info("Manual data refresh requested")

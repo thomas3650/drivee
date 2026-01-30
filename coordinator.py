@@ -2,22 +2,30 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import datetime
-from datetime import timedelta
 import logging
-import time
+from dataclasses import dataclass
+from datetime import timedelta
 
+from aiohttp import ClientError
+from cachetools import TTLCache
 from drivee_client import DriveeClient
+from drivee_client.errors import AuthenticationError, DriveeError
 from drivee_client.models.charge_point import ChargePoint
 from drivee_client.models.charging_history import ChargingHistory
 from drivee_client.models.charging_session import ChargingSession
 from drivee_client.models.price_periods import PricePeriods
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
+
+from .const import (
+    CACHE_DURATION_HOURS,
+    UPDATE_INTERVAL_CHARGING_SECONDS,
+    UPDATE_INTERVAL_IDLE_MINUTES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,13 +47,18 @@ class DriveeData:
 
 
 class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
-    """Class to manage fetching Drivee data."""
+    """Coordinator to manage fetching Drivee data with intelligent caching.
+
+    Features:
+    - Dynamic update intervals (30s when charging, 10min when idle)
+    - Smart caching (1-hour TTL cache for history and prices using cachetools)
+    - Session tracking (refreshes cache on session change)
+    - Proper error handling with re-authentication support
+    """
 
     client: DriveeClient
-    _last_charging_history_update: float
-    _cached_charging_history: ChargingHistory | None
-    _last_price_periods_update: float
-    _cached_price_periods: PricePeriods | None
+    _history_cache: TTLCache
+    _price_cache: TTLCache
     _last_session_id: str | None
     last_update_success_time: datetime.datetime | None
 
@@ -59,7 +72,16 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
         client: DriveeClient,
         config_entry: ConfigEntry,
     ) -> None:
-        """Initialize the data updater."""
+        """Initialize the Drivee data update coordinator.
+
+        Args:
+            hass: Home Assistant instance.
+            logger: Logger instance for coordinator.
+            name: Name of the coordinator.
+            update_interval: Initial update interval (will be adjusted dynamically).
+            client: Drivee API client instance.
+            config_entry: Config entry for this integration.
+        """
         super().__init__(
             hass,
             logger,
@@ -69,72 +91,146 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
             config_entry=config_entry,
         )
         self.client = client
-        self._last_charging_history_update = 0.0
-        self._cached_charging_history = None
-        self._last_price_periods_update = 0.0
-        self._cached_price_periods = None
+
+        # Create TTL caches with 1-hour expiration
+        cache_ttl_seconds = timedelta(hours=CACHE_DURATION_HOURS).total_seconds()
+        self._history_cache = TTLCache(maxsize=1, ttl=cache_ttl_seconds)
+        self._price_cache = TTLCache(maxsize=1, ttl=cache_ttl_seconds)
+
         self._last_session_id = None
         self.last_update_success_time = None
 
     async def _async_fetch_charge_point(self) -> ChargePoint:
-        """Fetch charge point data from the API."""
+        """Fetch charge point data from the API.
+
+        Always fetches fresh data on every update cycle to ensure
+        real-time charging status.
+
+        Returns:
+            ChargePoint: Current charge point status and session data.
+        """
         return await self.client.get_charge_point()
 
     async def _async_fetch_charging_history(
-        self, now: float, force: bool
+        self, force: bool = False
     ) -> ChargingHistory:
-        """Fetch or return cached charging history (1h cache)."""
-        last_update_delta = timedelta(seconds=now - self._last_charging_history_update)
-        if (
-            self._cached_charging_history is None
-            or last_update_delta > timedelta(hours=1)
-            or force
-        ):
-            charging_history = await self.client.get_charging_history()
-            self._cached_charging_history = charging_history
-            self._last_charging_history_update = now
-        return self._cached_charging_history
+        """Fetch or return cached charging history.
 
-    async def _async_fetch_price_periods(self, now: float, force: bool) -> PricePeriods:
-        """Fetch or return cached price periods (1h cache)."""
-        last_update_delta = timedelta(seconds=now - self._last_price_periods_update)
-        if (
-            self._cached_price_periods is None
-            or last_update_delta > timedelta(hours=1)
-            or force
-        ):
-            price_periods = await self.client.get_price_periods()
-            self._cached_price_periods = price_periods
-            self._last_price_periods_update = now
-        return self._cached_price_periods
+        Implements a 1-hour TTL cache to reduce API load. Cache is invalidated
+        when a new charging session is detected.
+
+        Args:
+            force: If True, bypass cache and fetch from API.
+
+        Returns:
+            ChargingHistory: Charging session history data.
+        """
+        # Clear cache if forced refresh
+        if force:
+            self._history_cache.clear()
+
+        # Try to get cached data
+        cached_data = self._history_cache.get("data")
+        if cached_data is not None:
+            _LOGGER.debug("Using cached charging history (cache hit)")
+            return cached_data
+
+        # Cache miss - fetch from API
+        _LOGGER.debug("Fetching charging history (cache miss)")
+        data = await self.client.get_charging_history()
+        self._history_cache["data"] = data
+        return data
+
+    async def _async_fetch_price_periods(self, force: bool = False) -> PricePeriods:
+        """Fetch or return cached price periods.
+
+        Implements a 1-hour TTL cache to reduce API load. Price periods typically
+        don't change frequently, so caching is beneficial.
+
+        Args:
+            force: If True, bypass cache and fetch from API.
+
+        Returns:
+            PricePeriods: Electricity price period data.
+        """
+        # Clear cache if forced refresh
+        if force:
+            self._price_cache.clear()
+
+        # Try to get cached data
+        cached_data = self._price_cache.get("data")
+        if cached_data is not None:
+            _LOGGER.debug("Using cached price periods (cache hit)")
+            return cached_data
+
+        # Cache miss - fetch from API
+        _LOGGER.debug("Fetching price periods (cache miss)")
+        data = await self.client.get_price_periods()
+        self._price_cache["data"] = data
+        return data
 
     async def _update_data(self) -> DriveeData:
         """Fetch data from API and build DriveeData.
 
         Adjust the update interval dynamically based on charging state.
+
+        Raises:
+            ConfigEntryAuthFailed: Authentication failed, user needs to reconfigure.
+            UpdateFailed: Communication error with the API.
         """
         try:
-            now = time.time()
+            _LOGGER.debug("Starting data update cycle")
             charge_point = await self._async_fetch_charge_point()
             current_session_id = getattr(charge_point.evse.session, "id", None)
+
+            # Force cache refresh if session changed
             force = False
             if self._last_session_id != current_session_id:
+                _LOGGER.info(
+                    "Session ID changed from %s to %s, forcing cache refresh",
+                    self._last_session_id,
+                    current_session_id,
+                )
                 force = True
-            charging_history = await self._async_fetch_charging_history(now, force)
-            price_periods = await self._async_fetch_price_periods(now, force)
-        except Exception:  # Broad to ensure coordinator robustness
-            _LOGGER.exception("Error fetching data")
-            raise
+
+            charging_history = await self._async_fetch_charging_history(force)
+            price_periods = await self._async_fetch_price_periods(force)
+
+        except AuthenticationError as err:
+            _LOGGER.error("Authentication failed: %s", err)
+            raise ConfigEntryAuthFailed(
+                "Authentication failed, please reconfigure the integration"
+            ) from err
+        except DriveeError as err:
+            _LOGGER.error("Drivee API error: %s", err)
+            raise UpdateFailed(f"Error communicating with Drivee API: {err}") from err
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.error("Connection error: %s", err)
+            raise UpdateFailed(f"Connection error: {err}") from err
+        except Exception as err:
+            _LOGGER.exception("Unexpected error during data update")
+            raise UpdateFailed(f"Unexpected error: {err}") from err
 
         # Update interval depends on charging state (avoid processing inside try)
-        self.update_interval = (
-            timedelta(seconds=30)
+        new_interval = (
+            timedelta(seconds=UPDATE_INTERVAL_CHARGING_SECONDS)
             if charge_point.evse.is_charging
-            else timedelta(minutes=10)
+            else timedelta(minutes=UPDATE_INTERVAL_IDLE_MINUTES)
         )
-        self._last_session_id = getattr(charge_point.evse.session, "id", None)
+
+        if new_interval != self.update_interval:
+            _LOGGER.info(
+                "Adjusting update interval from %s to %s (charging: %s)",
+                self.update_interval,
+                new_interval,
+                charge_point.evse.is_charging,
+            )
+            self.update_interval = new_interval
+
+        self._last_session_id = current_session_id
         # Store last successful update time as an aware UTC datetime (ISO 8601 friendly)
         self.last_update_success_time = dt_util.utcnow()
+        _LOGGER.debug("Data update cycle completed successfully")
 
         return DriveeData(
             charge_point=charge_point,

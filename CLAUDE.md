@@ -10,8 +10,30 @@ This is a **personal Home Assistant custom integration** for monitoring and cont
 - **Personal integration**: Hardcoded for Danish kroner (kr) and Copenhagen timezone - this is intentional and correct
 - **Cloud polling**: No local API, polls Drivee cloud at dynamic intervals
 - **HACS distribution**: Installable via Home Assistant Community Store
-- **Python 3.13+** with Home Assistant framework
+- **Python 3.11+** with Home Assistant framework (tested on 3.11 and 3.12)
 - **External dependency**: Uses `driveeClient` library (https://github.com/thomas3650/driveeClient)
+
+## Home Assistant Best Practices
+
+This integration MUST follow [Home Assistant developer guidelines](https://developers.home-assistant.io/docs/creating_component_index/).
+
+**Key Resources:**
+- [Integration Index](https://developers.home-assistant.io/docs/creating_component_index/)
+- [Quality Scale Requirements](https://developers.home-assistant.io/docs/integration_quality_scale_index/)
+- [Development Checklist](https://developers.home-assistant.io/docs/development_checklist/)
+- [Async Best Practices](https://developers.home-assistant.io/docs/asyncio_working_with_async/)
+- [Data Fetching Patterns](https://developers.home-assistant.io/docs/integration_fetching_data/)
+- [Entity Requirements](https://developers.home-assistant.io/docs/core/entity/)
+
+**Current Quality Tier:** Bronze (target: Silver)
+
+**Required Standards:**
+- All code must be fully type-hinted
+- Use async patterns throughout (no blocking I/O in event loop)
+- Proper error handling with specific exception types
+- Automated tests for all functionality
+- Comprehensive documentation and translations
+- Follow Home Assistant coding standards and conventions
 
 ## Architecture
 

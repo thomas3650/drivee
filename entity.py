@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 from typing import Any
 
 from drivee_client import ChargePoint, ChargingHistory, ChargingSession
 from drivee_client.models.price_periods import PricePeriods
-
-from homeassistant.core import DOMAIN
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import DOMAIN
 from .coordinator import DriveeData, DriveeDataUpdateCoordinator
 
 
@@ -19,35 +20,64 @@ class DriveeBaseEntity(CoordinatorEntity[DriveeDataUpdateCoordinator]):
     __slots__ = ()
 
     def _get_data(self) -> DriveeData:
-        """Return the current data from the coordinator."""
+        """Return the current data from the coordinator.
+
+        Returns:
+            DriveeData: The coordinator's current data including charge point,
+                        charging history, and price periods.
+        """
         return self.coordinator.data
 
     def _get_charge_point(self) -> ChargePoint:
-        """Return the current charge point from the coordinator data."""
+        """Return the current charge point from the coordinator data.
+
+        Returns:
+            ChargePoint: The charge point data including EVSE status and session.
+        """
         data = self._get_data()
         return data.charge_point
 
     def _get_current_session(self) -> ChargingSession | None:
-        """Return the current charging session from the coordinator data."""
+        """Return the current charging session from the coordinator data.
+
+        Returns:
+            ChargingSession | None: The current session if active, None otherwise.
+        """
         charge_point = self._get_charge_point()
         if charge_point and charge_point.evse and charge_point.evse.session:
             return charge_point.evse.session
         return None
 
     def _get_history(self) -> ChargingHistory | None:
-        """Return the current charging history from the coordinator data."""
+        """Return the current charging history from the coordinator data.
+
+        Returns:
+            ChargingHistory | None: The charging history with all sessions,
+                                    or None if unavailable.
+        """
         data = self._get_data()
         if data:
             return data.charging_history
         return None
 
     def _get_price_periods(self) -> PricePeriods:
-        """Return the current price periods from the coordinator data."""
+        """Return the current price periods from the coordinator data.
+
+        Returns:
+            PricePeriods: The price period data with electricity prices.
+        """
         data = self._get_data()
         return data.price_periods
 
     def _make_unique_id(self, suffix: str) -> str:
-        """Build a device-scoped unique_id for the entity."""
+        """Build a device-scoped unique_id for the entity.
+
+        Args:
+            suffix: The entity-specific suffix (typically the translation key).
+
+        Returns:
+            str: A unique identifier in the format "Drivee_{suffix}".
+        """
         return f"Drivee_{suffix}"
 
     def __init__(self, coordinator: DriveeDataUpdateCoordinator) -> None:

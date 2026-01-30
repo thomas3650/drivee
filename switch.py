@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from aiohttp import ClientError
 from drivee_client.errors import DriveeError
-
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -18,6 +19,7 @@ from .coordinator import DriveeDataUpdateCoordinator
 from .entity import DriveeBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -49,17 +51,37 @@ class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
         return self._get_charge_point() is not None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Start charging."""
+        """Start charging.
+
+        Raises:
+            HomeAssistantError: If charging cannot be started.
+        """
         try:
+            _LOGGER.debug("Starting charging")
             await self.coordinator.client.start_charging()
-            self.hass.add_job(self.coordinator.async_request_refresh)
+            await self.coordinator.async_request_refresh()
+            _LOGGER.info("Charging started successfully")
         except DriveeError as err:
             _LOGGER.error("Failed to start charging: %s", err)
+            raise HomeAssistantError(f"Failed to start charging: {err}") from err
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.error("Connection error while starting charging: %s", err)
+            raise HomeAssistantError(f"Connection error: {err}") from err
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Stop charging."""
+        """Stop charging.
+
+        Raises:
+            HomeAssistantError: If charging cannot be stopped.
+        """
         try:
+            _LOGGER.debug("Stopping charging")
             await self.coordinator.client.end_charging()
-            self.hass.add_job(self.coordinator.async_request_refresh)
+            await self.coordinator.async_request_refresh()
+            _LOGGER.info("Charging stopped successfully")
         except DriveeError as err:
             _LOGGER.error("Failed to stop charging: %s", err)
+            raise HomeAssistantError(f"Failed to stop charging: {err}") from err
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.error("Connection error while stopping charging: %s", err)
+            raise HomeAssistantError(f"Connection error: {err}") from err

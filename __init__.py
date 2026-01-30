@@ -5,12 +5,11 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
+from drivee_client import DriveeClient
 from homeassistant.config import ConfigType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-
-from drivee_client import DriveeClient
 
 from .const import DOMAIN
 from .coordinator import DriveeDataUpdateCoordinator
@@ -67,4 +66,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    coordinator: DriveeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # Close client session if available
+    if hasattr(coordinator.client, "close"):
+        _LOGGER.debug("Closing Drivee client connection")
+        await coordinator.client.close()
+
+    # Unload platforms
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    # Remove coordinator from hass.data
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+        _LOGGER.debug("Successfully unloaded Drivee integration")
+
+    return unload_ok

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal
 import logging
+from decimal import Decimal
 from typing import Any
 
 from drivee_client.models.price_periods import PricePeriods
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -143,7 +142,6 @@ class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "current_session_energy"
     _attr_icon = "mdi:battery-charging-50"
-
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
     _attr_name = "Current Session Energy"
@@ -169,7 +167,6 @@ class DriveeCurrentSessionCostSensor(DriveeBaseSensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "session_cost"
     _attr_icon = "mdi:cash-100"
-
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = "kr"
     _attr_name = "Current Session Cost"
@@ -236,7 +233,20 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
         self.async_write_ha_state()
 
     def _on_session_end_update_total(self) -> None:
-        """When the session ends, add its energy to the stored total and record details."""
+        """Update total energy when charging sessions end.
+
+        This method processes the charging history and adds energy from new sessions
+        to the cumulative total. It tracks the last processed session to avoid
+        double-counting energy across Home Assistant restarts.
+
+        The algorithm:
+        1. If no sessions have been processed yet (_last_finished_session_end is None),
+           sum all historical sessions.
+        2. Otherwise, only add sessions that ended after the last processed session.
+        3. Update _last_finished_session_end to track progress.
+
+        Note: All energy values are stored in Wh (watt-hours) internally.
+        """
         data = self._get_data()
         if data is None:
             return
@@ -302,6 +312,22 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
     _attr_entity_category: str | None = None
 
     def _local_iso(self, dt_obj: datetime.datetime | None) -> str | None:
+        """Convert datetime to Copenhagen local time ISO string.
+
+        This method handles a quirk where the price data provider sends times
+        that are 1 hour ahead during standard time (winter, non-DST period).
+
+        Args:
+            dt_obj: Datetime object to convert, may be timezone-aware or naive.
+
+        Returns:
+            str | None: ISO 8601 formatted string in Copenhagen local time,
+                        or None if input is None.
+
+        Note:
+            During standard time (UTC+01:00), subtracts 1 hour to correct
+            for provider's offset. During DST (UTC+02:00), uses time as-is.
+        """
         if dt_obj is None:
             return None
         local_tz = dt_util.DEFAULT_TIME_ZONE  # Copenhagen local timezone
@@ -347,9 +373,11 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         price_only_today: list[float] = []
         price_only_tomorrow: list[float] = []
         interval_minutes = 15
+        # Use timezone-aware date for consistency
+        today = dt_util.now().date()
         timesToday = [
             (
-                datetime.datetime.combine(datetime.date.today(), datetime.time(0, 0))
+                datetime.datetime.combine(today, datetime.time(0, 0))
                 + datetime.timedelta(minutes=i)
             )
             for i in range(0, 24 * 60, interval_minutes)
@@ -357,7 +385,7 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         timesTomorrow = [
             (
                 datetime.datetime.combine(
-                    datetime.date.today() + datetime.timedelta(days=1),
+                    today + datetime.timedelta(days=1),
                     datetime.time(0, 0),
                 )
                 + datetime.timedelta(minutes=i)
