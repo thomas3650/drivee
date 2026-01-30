@@ -41,6 +41,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create custom_components structure for hassfest
+        run: |
+          mkdir -p custom_components/drivee
+          # Copy all integration files to the proper directory structure
+          cp *.py custom_components/drivee/ 2>/dev/null || true
+          cp *.json custom_components/drivee/
+          cp -r translations custom_components/drivee/ 2>/dev/null || true
+
       - name: Run hassfest
         uses: home-assistant/actions/hassfest@master
 
