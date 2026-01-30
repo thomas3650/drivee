@@ -24,6 +24,7 @@ def pytest_collection_modifyitems(config, items):
     """Skip integration tests if Home Assistant is not available."""
     try:
         import homeassistant  # noqa: F401
+
         has_ha = True
     except (ImportError, ModuleNotFoundError):
         has_ha = False
