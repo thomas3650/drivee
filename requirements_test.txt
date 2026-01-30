@@ -7,6 +7,6 @@ pytest-cov>=4.1.0
 # Integration requirements (from manifest.json)
 aiohttp>=3.12.15
 tenacity>=8.0.0
-pydantic>=2.11.7
+pydantic>=2.0.0
 driveeClient==0.1.4
 cachetools>=5.3.0
