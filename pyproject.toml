@@ -41,3 +41,18 @@ no_implicit_reexport = true
 warn_return_any = true
 warn_unreachable = true
 strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=custom_components.drivee",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "-x",  # Stop on first failure
+    "--timeout=9",  # Fail tests exceeding 9 seconds
+    "--durations=10",  # Show 10 slowest tests
+]
