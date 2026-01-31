@@ -65,9 +65,10 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
             except DriveeError as err:
                 _LOGGER.error("Drivee API error during setup: %s", err)
                 errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during authentication")
+            except Exception as err:
+                _LOGGER.exception("Unexpected error during authentication: %s", err)
                 errors["base"] = "unknown"
+                raise  # Re-raise unexpected exceptions for debugging
 
         return self.async_show_form(
             step_id="user",
@@ -124,9 +125,10 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
             except DriveeError as err:
                 _LOGGER.error("Drivee API error during re-authentication: %s", err)
                 errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during re-authentication")
+            except Exception as err:
+                _LOGGER.exception("Unexpected error during re-authentication: %s", err)
                 errors["base"] = "unknown"
+                raise  # Re-raise unexpected exceptions for debugging
 
         return self.async_show_form(
             step_id="reauth_confirm",

@@ -6,7 +6,8 @@
       "Bash(pip install:*)",
       "Bash(grep:*)",
       "Bash(ruff check:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mypy:*)"
     ]
   }
 }

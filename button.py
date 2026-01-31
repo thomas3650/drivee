@@ -37,7 +37,11 @@ class DriveeForceRefreshButton(DriveeBaseEntity, ButtonEntity):
     _attr_name = "Force Refresh"
 
     async def async_press(self) -> None:
-        """Handle the button press."""
+        """Press the button to force a data refresh from the Drivee API.
+
+        This triggers an immediate coordinator refresh, bypassing the normal
+        polling interval to fetch the latest charge point data.
+        """
         _LOGGER.debug("Force refresh button pressed")
         # Request an immediate refresh from the coordinator
         await self.coordinator.async_request_refresh()

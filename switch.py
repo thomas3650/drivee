@@ -51,10 +51,13 @@ class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
         return self._get_charge_point() is not None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Start charging.
+        """Turn on the switch to start charging.
+
+        Args:
+            **kwargs: Additional keyword arguments (unused).
 
         Raises:
-            HomeAssistantError: If charging cannot be started.
+            HomeAssistantError: If the charging command fails or times out.
         """
         try:
             _LOGGER.debug("Starting charging")
@@ -69,10 +72,13 @@ class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
             raise HomeAssistantError(f"Connection error: {err}") from err
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Stop charging.
+        """Turn off the switch to stop charging.
+
+        Args:
+            **kwargs: Additional keyword arguments (unused).
 
         Raises:
-            HomeAssistantError: If charging cannot be stopped.
+            HomeAssistantError: If the stop charging command fails or times out.
         """
         try:
             _LOGGER.debug("Stopping charging")

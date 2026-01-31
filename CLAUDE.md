@@ -1,142 +1,245 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
-This is a **personal Home Assistant custom integration** for monitoring and controlling a Drivee-compatible EV Wallbox charger. It connects to the Drivee cloud API to provide real-time charging data, control, and energy metrics within Home Assistant.
+This is a **Home Assistant custom integration** for monitoring and controlling a Drivee EV wallbox charger. The integration communicates with the Drivee cloud API to provide:
+
+- Real-time charging status and control
+- Energy consumption tracking (per session and cumulative)
+- Electricity price forecasting (Danish market)
+- Session history and cost calculation
+
+**API Client:** Uses the [driveeClient library](https://github.com/thomas3650/driveeClient) for all Drivee API communication.
 
 **Key Characteristics:**
-- **Personal integration**: Hardcoded for Danish kroner (kr) and Copenhagen timezone - this is intentional and correct
+- **Personal integration**: Configured for Danish kroner (DKK) and Copenhagen timezone
 - **Cloud polling**: No local API, polls Drivee cloud at dynamic intervals
 - **HACS distribution**: Installable via Home Assistant Community Store
-- **Python 3.11+** with Home Assistant framework (tested on 3.11 and 3.12)
-- **External dependency**: Uses `driveeClient` library (https://github.com/thomas3650/driveeClient)
+- **Python 3.11+** with Home Assistant framework
 
-## Home Assistant Best Practices
+**Distribution:** HACS with `content_in_root: true` (files in repository root, not subdirectory)
 
-This integration MUST follow [Home Assistant developer guidelines](https://developers.home-assistant.io/docs/creating_component_index/).
+## Home Assistant Compliance
 
-**Key Resources:**
-- [Integration Index](https://developers.home-assistant.io/docs/creating_component_index/)
-- [Quality Scale Requirements](https://developers.home-assistant.io/docs/integration_quality_scale_index/)
-- [Development Checklist](https://developers.home-assistant.io/docs/development_checklist/)
-- [Async Best Practices](https://developers.home-assistant.io/docs/asyncio_working_with_async/)
-- [Data Fetching Patterns](https://developers.home-assistant.io/docs/integration_fetching_data/)
-- [Entity Requirements](https://developers.home-assistant.io/docs/core/entity/)
+**Official Documentation:** https://developers.home-assistant.io/docs/creating_component_index/
 
-**Current Quality Tier:** Bronze (target: Silver)
+**Quality Tier:** Bronze → Silver target
 
-**Required Standards:**
-- All code must be fully type-hinted
-- Use async patterns throughout (no blocking I/O in event loop)
-- Proper error handling with specific exception types
-- Automated tests for all functionality
-- Comprehensive documentation and translations
-- Follow Home Assistant coding standards and conventions
+### Critical Requirements
+
+#### 1. Integration Structure
+- `DOMAIN` constant matches directory name
+- `CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)` (UI-only config)
+- `version` key in manifest.json (required for custom_components)
+- All platforms return boolean from setup methods
+
+#### 2. Async Patterns (BLOCKING = FREEZE HA)
+- ❌ No blocking I/O in event loop
+- ❌ No `@property` methods that perform I/O
+- ✅ All API calls must be async
+- ✅ Use `hass.async_add_executor_job()` for blocking operations
+
+**Why this matters:** Blocking the event loop freezes the entire Home Assistant instance. Even a 1-second blocking call will make the UI unresponsive for all users.
+
+**Reference:** https://developers.home-assistant.io/docs/asyncio_working_with_async/
+
+#### 3. Error Handling (CRITICAL FOR RELIABILITY)
+- `ConfigEntryAuthFailed` → Triggers re-authentication flow
+- `UpdateFailed` → Coordinator errors with user-friendly message
+- `HomeAssistantError` → Service call failures
+- NO broad `except Exception` without re-raising
+
+**Why this matters:** Specific exceptions enable Home Assistant to handle errors gracefully (e.g., prompting for new credentials vs. showing retry options).
+
+#### 4. Entity Standards
+- Use `_attr_translation_key`, not hardcoded `_attr_name`
+- Single `device_info` shared across all entities
+- Unique IDs must be stable across restarts
+- State from coordinator data, never fetch directly
+
+**Why this matters:** Entities that fetch data directly bypass coordinator caching, causing duplicate API calls and breaking the coordinator pattern.
+
+**Reference:** https://developers.home-assistant.io/docs/core/entity/
+
+#### 5. Security (NEVER COMPROMISE)
+- ❌ NEVER log passwords, tokens, or credentials
+- ❌ NEVER store credentials in state attributes
+- ✅ Credentials only in encrypted config entries
+- ✅ Validate all user input in config flow
+
+**Why this matters:** State attributes are visible in the UI and stored in plaintext in the state machine. Logging credentials exposes them in log files that may be shared for debugging.
+
+### Code Quality Checklist
+
+**Before Committing:**
+- [ ] All functions have type hints
+- [ ] `from __future__ import annotations` at top of file
+- [ ] Docstrings for public methods
+- [ ] No blocking operations in async code
+- [ ] Specific exceptions (not bare `except:`)
+- [ ] No credentials in logs or state
+
+**Testing (when implemented):**
+- Config flow: Valid/invalid credentials, connection errors
+- Coordinator: Caching, session tracking, error handling
+- Entities: State calculation, attributes, restoration
 
 ## Architecture
 
 ### Core Pattern: Coordinator-Based Data Management
 
-The integration uses Home Assistant's DataUpdateCoordinator pattern with intelligent caching and dynamic polling:
+The integration uses Home Assistant's DataUpdateCoordinator pattern:
 
 ```
-User Credentials (Config Flow)
+Config Flow (Credentials)
     ↓
-DriveeClient (External Library - handles API authentication & calls)
+DriveeClient (API Library)
     ↓
-DriveeDataUpdateCoordinator (Smart caching + dynamic intervals)
-    ├── Charge Point Data (every update)
-    ├── Charging History (1-hour cache)
-    └── Price Periods (1-hour cache)
+DriveeDataUpdateCoordinator (Smart caching + dynamic polling)
     ↓
 DriveeData (Structured dataclass)
     ↓
 Entity Platforms (Sensors, Switches, Buttons, Binary Sensors)
-    ↓
-Home Assistant UI
 ```
 
-### Key Components
+**Why coordinator pattern:** Centralizes data fetching, provides caching, handles errors consistently, prevents duplicate API calls from multiple entities.
 
-#### 1. **coordinator.py** - Data Orchestration
-- **DriveeDataUpdateCoordinator**: Centralized data fetching for all entities
-- **Smart Caching**:
-  - Charge point status: fetched every update cycle
-  - Charging history: cached 1 hour (refreshed when session ID changes)
-  - Price periods: cached 1 hour (refreshed when session ID changes)
-- **Dynamic Polling Intervals**:
-  - Active charging: 30 seconds (real-time monitoring)
-  - Idle state: 10 minutes (reduced API load)
-  - Automatically adjusts based on `charge_point.evse.is_charging`
-- **Session Tracking**: Detects session ID changes to force cache refresh for historical data
+### Component Roles
 
-#### 2. **entity.py** - Base Entity Framework
-- **DriveeBaseEntity**: Shared functionality for all entity types
-  - Device grouping (all entities under single "Drivee Charger" device)
-  - Helper methods: `_get_charge_point()`, `_get_current_session()`, `_get_history()`, `_get_price_periods()`
-  - Unique ID generation
-  - Translation key management
+| Component | Responsibility |
+|-----------|----------------|
+| `__init__.py` | Integration entry point, platform setup, client initialization |
+| `coordinator.py` | Data fetching, caching, dynamic polling intervals |
+| `entity.py` | Base entity class with shared device_info and helper methods |
+| `config_flow.py` | UI-based setup flow with credential validation |
+| `sensor.py` | 7 sensors: status, energy, cost, price forecasting |
+| `binary_sensor.py` | Connection and charging state indicators |
+| `switch.py` | Start/stop charging control |
+| `button.py` | Force refresh button |
 
-#### 3. **Platform Implementations**
-- **sensor.py** (largest file, 16KB):
-  - 7 sensors: status, name, current session energy/cost, total energy, current price, last refresh
-  - `DriveeTotalEnergySensor`: Implements state restoration to persist cumulative energy across restarts
-  - `DriveePriceSensor`: Provides current price + hourly forecasts (15-min intervals) in attributes
-- **binary_sensor.py**: Connection status, charging active indicator
-- **switch.py**: Start/stop charging control
-- **button.py**: Force refresh button
+## Integration-Specific Patterns
 
-#### 4. **config_flow.py** - UI Setup
-- Validates credentials by attempting authentication
-- Uses username as unique ID (prevents duplicate configurations)
-- No YAML configuration required
+### 1. Smart Caching (coordinator.py)
+
+**Why:** API rate limiting and reduced cloud load
+
+**Implementation:**
+- Charge point data: fetched every update cycle (always fresh)
+- Charging history: cached 1 hour (historical data doesn't change frequently)
+- Price periods: cached 1 hour (price updates are infrequent)
+
+**Cache Invalidation:** Session ID change triggers immediate cache clear for history/prices
+
+**Pattern:** TTLCache with 1-hour expiration, check cache first, fallback to API, store result
+
+### 2. Dynamic Polling (coordinator.py)
+
+**Why:** Balance real-time updates during charging vs. reduced API load when idle
+
+**Implementation:**
+- **Active charging:** 30-second updates (near real-time monitoring)
+- **Idle state:** 10-minute updates (minimal API calls)
+
+**Trigger:** `charge_point.evse.is_charging` boolean determines interval
+
+**Pattern:** Coordinator adjusts `update_interval` dynamically in `_async_update_data()`
+
+### 3. Timezone Handling (sensor.py - DriveePriceSensor)
+
+**⚠️ CRITICAL: DO NOT REMOVE THIS WORKAROUND**
+
+**Why:** Provider API sends times 1 hour ahead during winter (non-DST)
+
+**Issue:** Price period times are incorrect during standard time (not daylight saving time)
+
+**Workaround:**
+```python
+if not local_dt.dst():
+    # Subtract 1 hour during standard time
+    local_dt = local_dt - timedelta(hours=1)
+```
+
+**Location:** `_local_iso()` method in `sensor.py:DriveePriceSensor`
+
+**DO NOT REMOVE** - Required for correct price timing in winter months
+
+### 4. State Restoration (sensor.py - DriveeTotalEnergySensor)
+
+**Why:** Persist cumulative energy total across Home Assistant restarts
+
+**Implementation:**
+- Stores `_total_wh` and `last_finished_session_end` in `extra_state_attributes`
+- Overrides `async_added_to_hass()` to restore from previous state
+- Tracks last finished session to avoid double-counting energy
+
+**Pattern:** Use `extra_restore_state_data` for internal state that shouldn't be visible as regular attributes
+
+**Reference:** https://developers.home-assistant.io/docs/core/entity/#restoring-entity-state
+
+### 5. Price Forecasting (sensor.py - DriveePriceSensor)
+
+**Why:** Enable automation based on future electricity prices (charge when cheap)
+
+**Data:** 15-minute interval price data for today/tomorrow
+
+**Attributes:**
+- `today` / `tomorrow`: Simple price arrays (floats only)
+- `raw_today` / `raw_tomorrow`: Full objects with timestamps
+
+**Fallback:** Returns 0.0 for today, 10.0 for tomorrow if no data available
+
+**Pattern:** Current state = current 15-min interval price, future prices in attributes for automation
+
+### 6. Personal Configuration (DO NOT CHANGE)
+
+**Currency:**
+- Hardcoded to Danish kroner (kr) throughout
+- Used in: `DriveeCurrentSessionCostSensor`, `DriveePriceSensor`
+- **Intentional:** This is a personal integration for Danish market
+
+**Timezone:**
+- Hardcoded to Copenhagen timezone
+- **Intentional:** Personal integration, timezone workaround is specific to this region
+- **DO NOT GENERALIZE:** The DST workaround is required for correct API behavior
 
 ## Development Workflow
 
 ### Manual Testing
-**No automated tests exist.** Testing must be done manually in Home Assistant:
 
-1. **Development Installation**:
-   ```bash
-   # Copy integration to Home Assistant custom_components
-   cp -r . <home-assistant-config>/custom_components/drivee/
+**No automated tests exist.** Testing must be done manually in Home Assistant.
 
-   # Restart Home Assistant
-   # Settings > System > Restart
-   ```
+**Setup:**
+1. Copy integration to `<home-assistant-config>/custom_components/drivee/`
+2. Restart Home Assistant (Settings > System > Restart)
+3. Add integration (Settings > Devices & Services > Add Integration > "Drivee")
 
-2. **Enable Debug Logging** in `configuration.yaml`:
-   ```yaml
-   logger:
-     default: warning
-     logs:
-       custom_components.drivee: debug
-       drivee_client: debug  # External library logs
-   ```
+**Debug Logging** in `configuration.yaml`:
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.drivee: debug
+    drivee_client: debug  # External library logs
+```
 
-3. **View Logs**:
-   - Settings > System > Logs
-   - Or check `home-assistant.log` file
-
-4. **Integration Setup**:
-   - Settings > Devices & Services > Add Integration
-   - Search for "Drivee"
-   - Enter username and password
+**View Logs:** Settings > System > Logs or check `home-assistant.log`
 
 ### Version Management
 
-Update version in `manifest.json`:
+Update version in `manifest.json` before releasing:
 ```json
 {
-  "version": "0.1.6"  // Increment for releases
+  "version": "0.1.7"  // Increment for releases
 }
 ```
 
+**Versioning:** Follow semantic versioning (MAJOR.MINOR.PATCH)
+
 ### HACS Distribution
 
-This integration is distributed via HACS. The `hacs.json` configuration:
+Configuration in `hacs.json`:
 ```json
 {
   "name": "Drivee",
@@ -145,68 +248,121 @@ This integration is distributed via HACS. The `hacs.json` configuration:
 }
 ```
 
-## Important Implementation Details
-
-### Timezone Handling (sensor.py)
-- Uses Copenhagen timezone (`dt_util.DEFAULT_TIME_ZONE`)
-- **Winter Time Adjustment**: Provider sends times 1 hour ahead during standard time (non-DST)
-  - Workaround: Subtracts 1 hour when `not local_dt.dst()`
-  - Location: `DriveePriceSensor._local_iso()` method
-
-### Currency
-- Hardcoded to Danish kroner (kr) throughout
-- Used in: `DriveeCurrentSessionCostSensor`, `DriveePriceSensor`
-
-### State Restoration
-- `DriveeTotalEnergySensor` persists cumulative energy across HA restarts
-- Stores internal state in `extra_state_attributes`: `_total_wh`, `last_finished_session_end`
-- Tracks last finished session to avoid double-counting energy
-
-### Energy Calculation
-- API returns energy in **Wh** (watt-hours)
-- Displayed to users in **kWh** (kilowatt-hours)
-- Conversion: `energy_kwh = energy_wh / 1000`
-
-### Price Forecasting
-- 15-minute interval price data for today/tomorrow
-- Attributes: `today`, `tomorrow` (price-only arrays), `raw_today`, `raw_tomorrow` (detailed objects)
-- Fallback behavior if no price data: 0.0 for today, 10.0 for tomorrow
+**Note:** `content_in_root: true` means integration files are in repository root, not in a subdirectory.
 
 ## Key Files Reference
 
-- **`__init__.py`**: Integration entry point, platform setup, client initialization
-- **`coordinator.py`**: Data fetching, caching logic, dynamic polling
-- **`entity.py`**: Base entity class with shared functionality
-- **`const.py`**: Domain constant and configuration keys
-- **`config_flow.py`**: UI-based configuration flow
-- **`sensor.py`**: All sensor entities (7 total)
-- **`binary_sensor.py`**: Binary sensors (2 total)
-- **`switch.py`**: Charging control switch
-- **`button.py`**: Force refresh button
-- **`manifest.json`**: Integration metadata, dependencies, version
+| File | Purpose |
+|------|---------|
+| `__init__.py` | Integration entry point, platform setup |
+| `coordinator.py` | Data fetching, caching, dynamic polling |
+| `entity.py` | Base entity with shared functionality |
+| `const.py` | Domain constant and configuration keys |
+| `config_flow.py` | UI-based configuration flow |
+| `sensor.py` | 7 sensor entities (largest file, 16KB) |
+| `binary_sensor.py` | 2 binary sensors (connection, charging) |
+| `switch.py` | Charging control switch |
+| `button.py` | Force refresh button |
+| `manifest.json` | Integration metadata, dependencies, version |
+| `strings.json` | UI text and translations |
+| `translations/en.json` | English translations |
 
 ## External Dependencies
 
 ### driveeClient Library
-- **Repository**: https://github.com/thomas3650/driveeClient
-- **Version**: 0.1.4 (pinned in manifest.json)
-- **Purpose**: Handles all Drivee API communication
-- **Key Classes**:
-  - `DriveeClient`: Main API client
-  - `ChargePoint`: Charge point status model
-  - `ChargingHistory`: Historical session data
-  - `ChargingSession`: Individual session details
-  - `PricePeriods`: Electricity pricing data
+- **Repository:** https://github.com/thomas3650/driveeClient
+- **Version:** 0.1.4 (pinned in manifest.json)
+- **Purpose:** Handles all Drivee API communication and authentication
+- **Key Classes:** `DriveeClient`, `ChargePoint`, `ChargingHistory`, `ChargingSession`, `PricePeriods`
 
 ### Other Dependencies
 - `aiohttp>=3.12.15`: Async HTTP client
-- `tenacity>=8.0.0`: Retry logic
+- `tenacity>=8.0.0`: Retry logic for API calls
 - `pydantic>=2.11.7`: Data validation and modeling
 
-## Code Style Notes
+## Common Patterns
 
-- **Type hints**: Used throughout (Python 3.9+ style)
-- **Async/await**: All I/O operations are async
-- **Slots optimization**: `__slots__ = ()` on entities for memory efficiency
-- **Dataclasses**: Used for structured data (`DriveeData`)
-- **Home Assistant conventions**: Translation keys, entity categories, device classes
+### Energy Units
+- **API returns:** Wh (watt-hours)
+- **Display to users:** kWh (kilowatt-hours)
+- **Conversion:** `energy_kwh = energy_wh / 1000`
+
+### Type Hints
+- Use `from __future__ import annotations` at top of every file
+- All functions and methods must have type hints
+- Use `HomeAssistant` not `HomeAssistantType`
+
+### Entity Optimization
+- Use `__slots__ = ()` on entity classes for memory efficiency
+- Store only necessary data in `extra_state_attributes`
+- Avoid duplicate data between state and attributes
+
+### Translation Keys
+- Use `_attr_translation_key` for entity names
+- Define translations in `strings.json` and `translations/en.json`
+- Never hardcode English strings in `_attr_name`
+
+## Anti-Patterns to Avoid
+
+❌ **Don't fetch data in entity properties**
+```python
+@property
+def native_value(self):
+    data = self.hass.data[DOMAIN].fetch_data()  # WRONG
+    return data.value
+```
+
+✅ **Do use coordinator data**
+```python
+@property
+def native_value(self):
+    return self.coordinator.data.charge_point.value  # CORRECT
+```
+
+❌ **Don't use broad exception catching**
+```python
+try:
+    await client.fetch()
+except Exception:  # WRONG - too broad
+    pass
+```
+
+✅ **Do use specific exceptions**
+```python
+try:
+    await client.fetch()
+except aiohttp.ClientError as err:  # CORRECT
+    raise UpdateFailed(f"Failed to fetch data: {err}") from err
+```
+
+❌ **Don't block the event loop**
+```python
+def fetch_data(self):
+    response = requests.get(url)  # WRONG - blocking
+    return response.json()
+```
+
+✅ **Do use async operations**
+```python
+async def fetch_data(self):
+    async with aiohttp.ClientSession() as session:  # CORRECT
+        async with session.get(url) as response:
+            return await response.json()
+```
+
+## Important Notes
+
+1. **No automated tests yet** - All testing is manual in Home Assistant
+2. **Personal integration** - Currency and timezone are intentionally hardcoded
+3. **Timezone workaround is critical** - Do not remove DST check in price sensor
+4. **Quality tier target: Silver** - Requires adding automated tests
+5. **HACS distribution** - Users install via Home Assistant Community Store
+
+## Resources
+
+- **Home Assistant Docs:** https://developers.home-assistant.io/
+- **Quality Scale:** https://developers.home-assistant.io/docs/integration_quality_scale_index/
+- **Async Best Practices:** https://developers.home-assistant.io/docs/asyncio_working_with_async/
+- **Entity Guidelines:** https://developers.home-assistant.io/docs/core/entity/
+- **Testing Guide:** https://developers.home-assistant.io/docs/development_testing/
+- **driveeClient Source:** https://github.com/thomas3650/driveeClient

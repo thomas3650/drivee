@@ -208,6 +208,8 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
             _LOGGER.error("Connection error: %s", err)
             raise UpdateFailed(f"Connection error: {err}") from err
         except Exception as err:
+            # Catch all unexpected exceptions and convert to UpdateFailed to prevent
+            # the coordinator from becoming permanently unavailable
             _LOGGER.exception("Unexpected error during data update")
             raise UpdateFailed(f"Unexpected error: {err}") from err
 
