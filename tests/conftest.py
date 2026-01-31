@@ -16,6 +16,12 @@ from custom_components.drivee.coordinator import (
 )
 
 
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):
+    """Enable custom integrations for all tests."""
+    yield
+
+
 @pytest.fixture
 def mock_charge_point():
     """Create mock ChargePoint data."""

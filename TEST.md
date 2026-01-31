@@ -176,6 +176,26 @@ If you get import errors, ensure test dependencies are installed:
 pip install -r requirements_test.txt
 ```
 
+### Windows Long Path Issues
+
+If you encounter errors about file paths being too long on Windows (especially when installing `homeassistant` package):
+
+**Solution 1: Enable Long Paths (Recommended)**
+1. Run PowerShell as Administrator
+2. Execute: `New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force`
+3. Restart your computer
+
+**Solution 2: Use Virtual Environment in Short Path**
+```bash
+# Create venv in short path
+python -m venv C:\venv\drivee
+C:\venv\drivee\Scripts\activate
+pip install -r requirements_test.txt
+```
+
+**Solution 3: Use Shorter Repository Path**
+Move the repository to a shorter path like `C:\sourcecode\private\drivee` instead of deeply nested user directories.
+
 ### Async Warnings
 
 If you see warnings about async, ensure pytest-asyncio is installed and configured in `pyproject.toml`.
