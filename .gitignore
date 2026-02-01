@@ -26,6 +26,7 @@ wheels/
 # Virtual Environment
 venv/
 ENV/
+env/
 
 # IDE
 .idea/
@@ -35,4 +36,17 @@ ENV/
 
 # Logs
 *.log
-__pycache__/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+*.cover
+coverage.xml
+
+# Home Assistant
+home-assistant.log
+home-assistant_v2.db

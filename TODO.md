@@ -14,7 +14,7 @@
 2. **Repository Structure Reorganization**
    - Moved integration files from root to `custom_components/drivee/`
    - Updated `hacs.json` to remove `content_in_root: true`
-   - Now matches standard Home Assistant integration structure (like volkswagencarnet) https://github.com/thomas3650/homeassistant-volkswagencarnet
+   - Now matches standard Home Assistant integration structure (like volkswagencarnet) https://github.com/robinostlund/homeassistant-volkswagencarnet
    - Structure:
      ```
      drivee/
