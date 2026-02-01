@@ -20,7 +20,14 @@
       "Bash(curl:*)",
       "WebFetch(domain:api.github.com)",
       "WebSearch",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(gh run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRestructure validation workflows and fix security issues\n\n- Combine PR validation workflows into single file\n- Add security controls: prevent untrusted code execution on pull_request_target\n- Add HACS comment feedback for PRs\n- Fix import ordering in tests/conftest.py \\(Ruff E402\\)\n- Add conditional job execution to isolate label validation\n\nSecurity improvements:\n- Only label validation runs on pull_request_target \\(no code checkout\\)\n- All code validation jobs run on pull_request/push only\n- Prevents fork PRs from executing with write permissions\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix validation errors\n\n- Fix import ordering in tests/conftest.py \\(Ruff I001\\)\n- Fix manifest.json key ordering \\(hassfest requirement\\)\n  Keys now alphabetically sorted after domain/name\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "WebFetch(domain:hacs.xyz)"
     ]
   }
 }
