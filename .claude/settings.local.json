@@ -27,7 +27,9 @@
       "Bash(git push:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix validation errors\n\n- Fix import ordering in tests/conftest.py \\(Ruff I001\\)\n- Fix manifest.json key ordering \\(hassfest requirement\\)\n  Keys now alphabetically sorted after domain/name\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "WebFetch(domain:hacs.xyz)"
+      "WebFetch(domain:hacs.xyz)",
+      "Bash(xargs:*)",
+      "Bash(wc:*)"
     ]
   }
 }
