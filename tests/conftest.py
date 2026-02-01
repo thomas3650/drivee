@@ -5,15 +5,13 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-# Import Home Assistant test fixtures
-pytest_plugins = "pytest_homeassistant_custom_component"
-
-# Import integration components
 from custom_components.drivee.coordinator import (
     DriveeData,
     DriveeDataUpdateCoordinator,
 )
+
+# Import Home Assistant test fixtures
+pytest_plugins = "pytest_homeassistant_custom_component"
 
 
 @pytest.fixture(autouse=True)
