@@ -12,6 +12,7 @@ class TestDriveeBaseEntity:
 
     def test_get_data(self, mock_coordinator, mock_coordinator_data):
         """Test _get_data returns coordinator data."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_entity"
@@ -26,6 +27,7 @@ class TestDriveeBaseEntity:
 
     def test_get_charge_point(self, mock_coordinator, mock_charge_point):
         """Test _get_charge_point extracts charge point."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_entity"
@@ -40,6 +42,7 @@ class TestDriveeBaseEntity:
 
     def test_get_current_session_when_present(self, mock_coordinator):
         """Test _get_current_session returns session when present."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_entity"
@@ -71,6 +74,7 @@ class TestDriveeBaseEntity:
 
     def test_get_history(self, mock_coordinator, mock_charging_history):
         """Test _get_history returns charging history."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_entity"
@@ -85,6 +89,7 @@ class TestDriveeBaseEntity:
 
     def test_get_price_periods(self, mock_coordinator, mock_price_periods):
         """Test _get_price_periods returns price periods."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_entity"
@@ -99,6 +104,7 @@ class TestDriveeBaseEntity:
 
     def test_make_unique_id(self, mock_coordinator):
         """Test _make_unique_id builds correct format."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_entity"
@@ -113,6 +119,7 @@ class TestDriveeBaseEntity:
 
     def test_init_sets_unique_id(self, mock_coordinator):
         """Test __init__ sets unique_id from translation key."""
+
         # Arrange & Act
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_sensor"
@@ -130,6 +137,7 @@ class TestDriveeBaseEntity:
 
     def test_device_info(self, mock_coordinator):
         """Test device_info returns correct structure."""
+
         # Arrange
         class TestEntity(DriveeBaseEntity):
             _attr_translation_key = "test_sensor"
