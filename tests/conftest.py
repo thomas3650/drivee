@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from custom_components.drivee.coordinator import (
     DriveeData,
     DriveeDataUpdateCoordinator,
