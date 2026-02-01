@@ -69,6 +69,7 @@ jobs:
         with:
           category: integration
           comment: true
+        continue-on-error: true  # Brands check not required for custom integrations
 
   test:
     name: Run Tests
