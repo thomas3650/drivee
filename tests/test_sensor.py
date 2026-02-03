@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
@@ -188,7 +187,6 @@ class TestDriveeTotalEnergySensor:
         Now only the tracking marker is reset, preserving the total.
         """
         # Arrange
-        now = dt_util.now()
         mock_charging_history.sessions = []
         mock_coordinator.data = DriveeData(
             charge_point=mock_coordinator.data.charge_point,

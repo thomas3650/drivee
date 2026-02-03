@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from homeassistant.helpers.entity import EntityCategory
 
 from custom_components.drivee.button import DriveeForceRefreshButton
@@ -39,5 +38,5 @@ class TestDriveeForceRefreshButton:
         button = DriveeForceRefreshButton(mock_coordinator)
 
         # Assert
-        # Unique ID is generated from translation_key by base class
-        assert button.unique_id == "force_refresh"
+        # Unique ID is generated with "Drivee_" prefix by base class
+        assert button.unique_id == "Drivee_force_refresh"
