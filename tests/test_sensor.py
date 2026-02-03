@@ -107,9 +107,7 @@ class TestDriveeTotalEnergySensor:
         sensor.entity_id = "sensor.drivee_total_energy"
 
         # Mock async_get_last_state to return None (first initialization)
-        with patch.object(
-            sensor, "async_get_last_state", return_value=None
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=None):
             # Act: Initialize sensor
             await sensor.async_added_to_hass()
 
@@ -159,9 +157,7 @@ class TestDriveeTotalEnergySensor:
         sensor.entity_id = "sensor.drivee_total_energy"
 
         # Mock async_get_last_state to return None (first initialization)
-        with patch.object(
-            sensor, "async_get_last_state", return_value=None
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=None):
             # Act: Initialize sensor
             await sensor.async_added_to_hass()
 
@@ -206,9 +202,7 @@ class TestDriveeTotalEnergySensor:
         }
 
         # Mock async_get_last_state to return corrupted state
-        with patch.object(
-            sensor, "async_get_last_state", return_value=mock_state
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=mock_state):
             # Act: Initialize sensor with corrupted state
             await sensor.async_added_to_hass()
 
@@ -244,9 +238,7 @@ class TestDriveeTotalEnergySensor:
         }
 
         # Mock async_get_last_state to return valid state
-        with patch.object(
-            sensor, "async_get_last_state", return_value=mock_state
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=mock_state):
             # Act: Initialize sensor
             await sensor.async_added_to_hass()
 
@@ -256,9 +248,10 @@ class TestDriveeTotalEnergySensor:
         # Assert: Tracking marker should be restored
         # Compare timestamps (may have microsecond differences)
         assert sensor._last_finished_session_end is not None
-        assert abs(
-            (sensor._last_finished_session_end - last_session_end).total_seconds()
-        ) < 1
+        assert (
+            abs((sensor._last_finished_session_end - last_session_end).total_seconds())
+            < 1
+        )
 
     async def test_add_new_finished_sessions(
         self, hass: HomeAssistant, mock_coordinator, mock_charging_history
@@ -305,9 +298,7 @@ class TestDriveeTotalEnergySensor:
             "last_finished_session_end": last_processed_session_end.isoformat(),
         }
 
-        with patch.object(
-            sensor, "async_get_last_state", return_value=mock_state
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=mock_state):
             # Act: Initialize and process update
             await sensor.async_added_to_hass()
 
@@ -468,9 +459,7 @@ class TestDriveeTotalEnergySensor:
             "last_finished_session_end": last_processed.isoformat(),
         }
 
-        with patch.object(
-            sensor, "async_get_last_state", return_value=mock_state
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=mock_state):
             # Act
             await sensor.async_added_to_hass()
 
@@ -491,9 +480,7 @@ class TestDriveeTotalEnergySensor:
         sensor.entity_id = "sensor.drivee_total_energy"
         sensor._total_wh = 50000.0
 
-        with patch.object(
-            sensor, "async_get_last_state", return_value=None
-        ):
+        with patch.object(sensor, "async_get_last_state", return_value=None):
             await sensor.async_added_to_hass()
 
         # Act: Process update with None data
@@ -502,9 +489,7 @@ class TestDriveeTotalEnergySensor:
         # Assert: Total should remain unchanged
         assert sensor._total_wh == 50000.0
 
-    def test_native_value_handles_decimal_session_energy(
-        self, mock_coordinator
-    ):
+    def test_native_value_handles_decimal_session_energy(self, mock_coordinator):
         """Test that native_value correctly handles Decimal energy values."""
         # Arrange
         sensor = DriveeTotalEnergySensor(mock_coordinator)
@@ -519,11 +504,11 @@ class TestDriveeTotalEnergySensor:
         native_value = sensor.native_value
 
         # Assert: Should handle Decimal correctly
-        assert native_value == 65.0  # (50000 + 15000.5) / 1000 = 65.0005 rounded to 65.0
+        assert (
+            native_value == 65.0
+        )  # (50000 + 15000.5) / 1000 = 65.0005 rounded to 65.0
 
-    def test_native_value_handles_invalid_session_energy(
-        self, mock_coordinator
-    ):
+    def test_native_value_handles_invalid_session_energy(self, mock_coordinator):
         """Test that native_value handles invalid session energy gracefully."""
         # Arrange
         sensor = DriveeTotalEnergySensor(mock_coordinator)
