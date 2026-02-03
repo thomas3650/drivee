@@ -190,7 +190,7 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
 
     __slots__ = ()
     _attr_has_entity_name: bool = True
-    _attr_translation_key = "total_energy"
+    _attr_translation_key = "total_energy_new"
     _attr_icon = "mdi:counter"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -218,8 +218,13 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
             elif isinstance(restored_end, datetime.datetime):
                 self._last_finished_session_end = restored_end
             else:
-                self._total_wh = 0.0
+                # Don't reset _total_wh - preserve accumulated energy
                 self._last_finished_session_end = None
+                _LOGGER.warning(
+                    "Failed to parse last_finished_session_end from state, "
+                    "will reprocess finished sessions (total preserved: %.1f kWh)",
+                    self._total_wh / 1000,
+                )
 
         await super().async_added_to_hass()
 
@@ -241,7 +246,8 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
 
         The algorithm:
         1. If no sessions have been processed yet (_last_finished_session_end is None),
-           sum all historical sessions.
+           mark all existing finished sessions as processed WITHOUT adding their energy.
+           This prevents huge energy spikes when the integration is first installed.
         2. Otherwise, only add sessions that ended after the last processed session.
         3. Update _last_finished_session_end to track progress.
 
@@ -257,18 +263,47 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
             data.charging_history.sessions, key=lambda s: s.started_at, reverse=False
         )
         if self._last_finished_session_end is None:
+            # First initialization: mark existing sessions as processed but don't add energy
+            # This ensures we only track NEW energy consumption from this point forward
             for session in sessions_ordered:
-                # session.energy is in Wh; convert to Wh
-                total_wh += float(session.energy)
-                self._last_finished_session_end = session.stopped_at
+                if session.stopped_at is not None:
+                    # Don't add historical energy on first initialization
+                    # Only mark sessions as processed to start counting from now
+                    self._last_finished_session_end = session.stopped_at
+
+            _LOGGER.info(
+                "First initialization: marked %d historical sessions as processed, "
+                "starting total at %.1f kWh",
+                len([s for s in sessions_ordered if s.stopped_at is not None]),
+                self._total_wh / 1000,
+            )
         else:
+            new_sessions_count = 0
+            new_sessions_energy = 0.0
             for session in sessions_ordered:
                 if (
                     session.stopped_at is not None
                     and session.stopped_at > self._last_finished_session_end
                 ):
-                    total_wh += float(session.energy)
+                    session_energy = float(session.energy)
+                    total_wh += session_energy
+                    new_sessions_energy += session_energy
+                    new_sessions_count += 1
                     self._last_finished_session_end = session.stopped_at
+                    _LOGGER.debug(
+                        "Added finished session: %.1f kWh (ended at %s)",
+                        session_energy / 1000,
+                        session.stopped_at,
+                    )
+
+            if new_sessions_count > 0:
+                _LOGGER.info(
+                    "Processed %d new finished session(s), added %.1f kWh to total (new total: %.1f kWh)",
+                    new_sessions_count,
+                    new_sessions_energy / 1000,
+                    total_wh / 1000,
+                )
+
         self._total_wh = total_wh
 
     @property
