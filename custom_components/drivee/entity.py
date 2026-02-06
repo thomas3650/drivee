@@ -21,6 +21,7 @@ class DriveeBaseEntity(CoordinatorEntity[DriveeDataUpdateCoordinator]):
     __slots__ = ()
 
     _attr_has_entity_name = True
+    _attr_translation_key: str | None = None
 
     def _get_data(self) -> DriveeData | None:
         """Return the current data from the coordinator.

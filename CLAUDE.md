@@ -350,6 +350,20 @@ async def fetch_data(self):
             return await response.json()
 ```
 
+❌ **Don't use `getattr` when the attribute is guaranteed to exist**
+```python
+value = getattr(self.coordinator, "last_update_success_time", None)  # WRONG - attribute always exists
+session_wh = getattr(session, "energy", None)  # WRONG if session is already null-checked
+```
+
+✅ **Do use direct attribute access for known properties**
+```python
+value = self.coordinator.last_update_success_time  # CORRECT
+session_wh = session.energy  # CORRECT - session already checked for None
+```
+
+**When `getattr` IS appropriate:** Use it when the object itself may be `None` or the attribute is truly optional (e.g., `getattr(charge_point.evse.session, "id", None)` where `session` can be `None`).
+
 ## Important Notes
 
 1. **No automated tests yet** - All testing is manual in Home Assistant

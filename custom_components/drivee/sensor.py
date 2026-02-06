@@ -256,9 +256,7 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
 
         session = self._get_current_session()
         if session is not None:
-            session_wh = getattr(session, "energy", None)
-            if isinstance(session_wh, (int, float, Decimal)):
-                total_wh += float(session_wh)
+            total_wh += float(session.energy)
 
         ret = round(total_wh / 1000, 1)
         return ret
@@ -421,9 +419,9 @@ class DriveeLastRefreshSensor(DriveeBaseSensorEntity):
     @property
     def native_value(self) -> datetime.datetime | None:
         """Return the time of the last successful refresh."""
-        return getattr(self.coordinator, "last_update_success_time", None)
+        return self.coordinator.last_update_success_time
 
     @property
     def available(self) -> bool:
         """Return True if we have at least one successful refresh."""
-        return getattr(self.coordinator, "last_update_success_time", None) is not None
+        return self.coordinator.last_update_success_time is not None
