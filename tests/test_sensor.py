@@ -508,16 +508,12 @@ class TestDriveeTotalEnergySensor:
             native_value == 65.0
         )  # (50000 + 15000.5) / 1000 = 65.0005 rounded to 65.0
 
-    def test_native_value_handles_invalid_session_energy(self, mock_coordinator):
-        """Test that native_value handles invalid session energy gracefully."""
+    def test_native_value_handles_no_active_session(self, mock_coordinator):
+        """Test that native_value works when there is no active session."""
         # Arrange
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor._total_wh = 50000.0
-
-        # Create session with invalid energy
-        active_session = Mock()
-        active_session.energy = "not-a-number"
-        mock_coordinator.data.charge_point.evse.session = active_session
+        mock_coordinator.data.charge_point.evse.session = None
 
         # Act
         native_value = sensor.native_value
