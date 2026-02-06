@@ -7,6 +7,9 @@ pytest-cov>=4.0.0
 # Home Assistant core (for test fixtures and types)
 homeassistant>=2024.1.0
 
+# Integration dependencies
+driveeClient==0.1.4
+
 # Code quality tools (same as CI/CD)
 ruff>=0.1.0
 mypy>=1.0.0
