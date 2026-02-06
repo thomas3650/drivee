@@ -228,14 +228,16 @@ logger:
 
 ### Version Management
 
-Update version in `manifest.json` before releasing:
-```json
-{
-  "version": "0.1.7"  // Increment for releases
-}
-```
-
 **Versioning:** Follow semantic versioning (MAJOR.MINOR.PATCH)
+
+**Release process:**
+1. Update version in `manifest.json`
+2. Merge PR to `main`
+3. Create and push a git tag: `git tag v0.x.x && git push origin v0.x.x`
+4. The `release.yml` workflow automatically creates a GitHub Release
+5. HACS detects the new release and notifies users
+
+**HACS uses GitHub releases (not manifest.json) to detect updates.** The release workflow verifies that the tag matches `manifest.json` to keep them in sync.
 
 ### HACS Distribution
 
