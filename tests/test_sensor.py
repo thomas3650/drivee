@@ -487,4 +487,3 @@ class TestDriveeTotalEnergySensor:
 
         # Assert: Total should remain unchanged
         assert sensor._total_wh == 50000.0
-
