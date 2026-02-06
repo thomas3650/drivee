@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,6 +19,21 @@ pytest_plugins = "pytest_homeassistant_custom_component"
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Enable custom integrations for all tests."""
     yield
+
+
+@pytest.fixture(autouse=True)
+def _bypass_platform_check():
+    """Bypass async_write_ha_state platform check for unit tests.
+
+    Entities created directly (not via the platform lifecycle) don't have
+    a platform set, causing ValueError when async_write_ha_state tries to
+    resolve translation keys. Patching it to a no-op keeps unit tests focused
+    on business logic.
+    """
+    with patch(
+        "homeassistant.helpers.entity.Entity.async_write_ha_state",
+    ):
+        yield
 
 
 @pytest.fixture
