@@ -30,11 +30,11 @@ async def async_setup_entry(
 class DriveeForceRefreshButton(DriveeBaseEntity, ButtonEntity):
     """Button to force a coordinator refresh."""
 
+    __slots__ = ()
     _attr_has_entity_name = True
     _attr_translation_key = "force_refresh"
     _attr_icon = "mdi:refresh"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_name = "Force Refresh"
 
     async def async_press(self) -> None:
         """Press the button to force a data refresh from the Drivee API.

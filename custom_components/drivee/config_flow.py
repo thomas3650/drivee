@@ -29,6 +29,39 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
     VERSION = 1
     MINOR_VERSION = 1
 
+    async def _validate_credentials(
+        self, username: str, password: str
+    ) -> dict[str, str]:
+        """Validate credentials against the Drivee API.
+
+        Returns:
+            A dict of errors keyed by field name. Empty dict means success.
+
+        Raises:
+            Exception: Re-raises unexpected exceptions after recording the error.
+        """
+        errors: dict[str, str] = {}
+        try:
+            async with DriveeClient(
+                username=username,
+                password=password,
+            ) as client:
+                await client.authenticate()
+        except AuthenticationError:
+            _LOGGER.warning("Authentication failed")
+            errors["base"] = "invalid_auth"
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.error("Connection error: %s", err)
+            errors["base"] = "cannot_connect"
+        except DriveeError as err:
+            _LOGGER.error("Drivee API error: %s", err)
+            errors["base"] = "cannot_connect"
+        except Exception as err:
+            _LOGGER.exception("Unexpected error during authentication: %s", err)
+            errors["base"] = "unknown"
+            raise
+        return errors
+
     async def async_step_user(
         self, user_input: Any | None = None
     ) -> config_entries.ConfigFlowResult:
@@ -36,39 +69,19 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            try:
-                # Test the connection using async context manager
-                async with DriveeClient(
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                ) as client:
-                    await client.authenticate()
+            errors = await self._validate_credentials(
+                user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
+            )
 
+            if not errors:
                 await self.async_set_unique_id(user_input[CONF_USERNAME])
                 self._abort_if_unique_id_configured()
 
-                _LOGGER.info(
-                    "Successfully authenticated user: %s", user_input[CONF_USERNAME]
-                )
+                _LOGGER.info("Successfully authenticated")
                 return self.async_create_entry(
                     title=user_input[CONF_USERNAME],
                     data=user_input,
                 )
-            except AuthenticationError:
-                _LOGGER.warning(
-                    "Authentication failed for user: %s", user_input.get(CONF_USERNAME)
-                )
-                errors["base"] = "invalid_auth"
-            except (ClientError, TimeoutError) as err:
-                _LOGGER.error("Connection error during setup: %s", err)
-                errors["base"] = "cannot_connect"
-            except DriveeError as err:
-                _LOGGER.error("Drivee API error during setup: %s", err)
-                errors["base"] = "cannot_connect"
-            except Exception as err:
-                _LOGGER.exception("Unexpected error during authentication: %s", err)
-                errors["base"] = "unknown"
-                raise  # Re-raise unexpected exceptions for debugging
 
         return self.async_show_form(
             step_id="user",
@@ -89,15 +102,11 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            try:
-                # Test the new credentials
-                async with DriveeClient(
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                ) as client:
-                    await client.authenticate()
+            errors = await self._validate_credentials(
+                user_input[CONF_USERNAME], user_input[CONF_PASSWORD]
+            )
 
-                # Update the config entry with new credentials
+            if not errors:
                 entry = self.hass.config_entries.async_get_entry(
                     self.context["entry_id"]
                 )
@@ -107,28 +116,8 @@ class DriveeConfigFlow(config_entries.ConfigFlow, domain="drivee"):
                         data=user_input,
                     )
                     await self.hass.config_entries.async_reload(entry.entry_id)
-                    _LOGGER.info(
-                        "Successfully re-authenticated user: %s",
-                        user_input[CONF_USERNAME],
-                    )
+                    _LOGGER.info("Successfully re-authenticated")
                     return self.async_abort(reason="reauth_successful")
-
-            except AuthenticationError:
-                _LOGGER.warning(
-                    "Re-authentication failed for user: %s",
-                    user_input.get(CONF_USERNAME),
-                )
-                errors["base"] = "invalid_auth"
-            except (ClientError, TimeoutError) as err:
-                _LOGGER.error("Connection error during re-authentication: %s", err)
-                errors["base"] = "cannot_connect"
-            except DriveeError as err:
-                _LOGGER.error("Drivee API error during re-authentication: %s", err)
-                errors["base"] = "cannot_connect"
-            except Exception as err:
-                _LOGGER.exception("Unexpected error during re-authentication: %s", err)
-                errors["base"] = "unknown"
-                raise  # Re-raise unexpected exceptions for debugging
 
         return self.async_show_form(
             step_id="reauth_confirm",

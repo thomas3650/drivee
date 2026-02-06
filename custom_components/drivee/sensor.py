@@ -8,10 +8,6 @@ from decimal import Decimal
 from typing import Any
 
 from drivee_client.models.price_periods import PricePeriods
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -67,27 +63,14 @@ class DriveeBaseSensorEntity(DriveeBaseEntity, SensorEntity):
         return charge_point is not None
 
 
-class DriveeBaseBinarySensorEntity(DriveeBaseEntity, BinarySensorEntity):
-    """Base binary sensor entity to ensure sensors are grouped under a single device."""
-
-    __slots__ = ()
-
-    @property
-    def available(self) -> bool:
-        """Return True if charge point status data is present."""
-        charge_point = self._get_charge_point()
-        return charge_point is not None
-
-
 class DriveeChargingStatusSensor(DriveeBaseSensorEntity):
     """Sensor for the Drivee charging status."""
 
     __slots__ = ()
     _attr_has_entity_name: bool = True
-    _attr_translation_key: str = "charging_status"
+    _attr_translation_key: str = "status"
     _attr_icon: str = "mdi:ev-station"
     _attr_device_class = None  # Plain text, no device class
-    _attr_name = "Charging Status"
 
     @property
     def native_value(self) -> str | None:
@@ -101,38 +84,15 @@ class DriveeChargePointNameSensor(DriveeBaseSensorEntity):
 
     __slots__ = ()
     _attr_has_entity_name: bool = True
-    _attr_translation_key: str = "charge_point_name"
+    _attr_translation_key: str = "charger_name"
     _attr_icon: str = "mdi:ev-station"
     _attr_device_class = None  # Plain text, no device class
-    _attr_name = "Charge Point Name"
 
     @property
     def native_value(self) -> str:
         """Return the name of the charge point, or None if unavailable."""
         charge_point = self._get_charge_point()
         return charge_point.name
-
-
-class DriveeEVSEConnectedSensor(DriveeBaseBinarySensorEntity):
-    """Sensor indicating if the EVSE is currently connected.
-
-    This should ideally be a binary sensor (connectivity); kept as a regular
-    sensor for now to avoid a breaking change. Returns True/False when
-    data is available, otherwise None.
-    """
-
-    __slots__ = ()
-    _attr_has_entity_name: bool = True
-    _attr_translation_key: str = "connected"
-    _attr_icon: str = "mdi:ev-station"
-    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
-    _attr_name = "EVSE Connected"
-
-    @property
-    def native_value(self) -> bool:
-        """Return True if EVSE is connected, False if not, or None if unknown."""
-        charge_point = self._get_charge_point()
-        return charge_point.evse.is_connected
 
 
 class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
@@ -143,8 +103,8 @@ class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
     _attr_translation_key = "current_session_energy"
     _attr_icon = "mdi:battery-charging-50"
     _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
-    _attr_name = "Current Session Energy"
 
     @property
     def native_value(self) -> float:
@@ -154,22 +114,16 @@ class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
             return float(0)
         return round(float(session.energy) / 1000, 1)
 
-    @property
-    def available(self) -> bool:
-        """Return if the sensor is available."""
-        return True
-
 
 class DriveeCurrentSessionCostSensor(DriveeBaseSensorEntity):
     """Sensor for the current session cost."""
 
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = "session_cost"
+    _attr_translation_key = "current_session_cost"
     _attr_icon = "mdi:cash-100"
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = "kr"
-    _attr_name = "Current Session Cost"
 
     @property
     def native_value(self) -> Decimal:
@@ -179,22 +133,16 @@ class DriveeCurrentSessionCostSensor(DriveeBaseSensorEntity):
             return Decimal(0)
         return session.amount
 
-    @property
-    def available(self) -> bool:
-        """Return if the sensor is available."""
-        return True
-
 
 class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
     """Sensor for the total energy charged across all sessions."""
 
     __slots__ = ()
     _attr_has_entity_name: bool = True
-    _attr_translation_key = "total_energy_new"
+    _attr_translation_key = "total_energy"
     _attr_icon = "mdi:counter"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
-    _attr_name = "Total Energy"
     _attr_suggested_display_precision: int = 1
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -343,8 +291,6 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
     _attr_device_class: str | None = None  # No standard device class for price
     _attr_native_unit_of_measurement: str = "kr/kWh"
     _attr_suggested_display_precision: int = 2
-    _attr_name: str | None = "Current Price"
-    _attr_entity_category: str | None = None
 
     def _local_iso(self, dt_obj: datetime.datetime | None) -> str | None:
         """Convert datetime to Copenhagen local time ISO string.
@@ -478,7 +424,6 @@ class DriveeLastRefreshSensor(DriveeBaseSensorEntity):
     _attr_translation_key = "last_refresh"
     _attr_icon = "mdi:update"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _attr_name = "Last refresh"
 
     @property
     def native_value(self) -> datetime.datetime | None:

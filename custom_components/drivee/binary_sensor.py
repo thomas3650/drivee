@@ -31,9 +31,8 @@ class DriveeEvseConnectedBinarySensor(DriveeBaseEntity, BinarySensorEntity):
 
     __slots__ = ()
     _attr_has_entity_name = True
-    _attr_translation_key = "evse_connected"
+    _attr_translation_key = "connection"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
-    _attr_name = "Connected"
 
     @property
     def is_on(self) -> bool:
@@ -53,9 +52,8 @@ class DriveeChargingBinarySensor(DriveeBaseEntity, BinarySensorEntity):
 
     __slots__ = ()
     _attr_has_entity_name: bool = True
-    _attr_translation_key: str = "charging_active"
+    _attr_translation_key: str = "charging"
     _attr_icon: str = "mdi:ev-station"
-    _attr_name: str = "Charging Active"
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     @property
