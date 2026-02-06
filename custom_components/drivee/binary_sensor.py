@@ -22,10 +22,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up Drivee binary sensors."""
     coordinator: DriveeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([
-        DriveeEvseConnectedBinarySensor(coordinator),
-        DriveeChargingBinarySensor(coordinator),
-    ])
+    async_add_entities(
+        [
+            DriveeEvseConnectedBinarySensor(coordinator),
+            DriveeChargingBinarySensor(coordinator),
+        ]
+    )
 
 
 class DriveeEvseConnectedBinarySensor(DriveeBaseEntity, BinarySensorEntity):
