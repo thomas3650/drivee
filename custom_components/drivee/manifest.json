@@ -1,0 +1,20 @@
+{
+  "domain": "drivee",
+  "name": "Drivee",
+  "codeowners": [
+    "@thomas3650"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/thomas3650/drivee",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/thomas3650/drivee/issues",
+  "requirements": [
+    "aiohttp>=3.12.15",
+    "tenacity>=8.0.0",
+    "pydantic>=2.11.7",
+    "driveeClient==0.1.4",
+    "cachetools>=5.3.0"
+  ],
+  "version": "0.1.7"
+}

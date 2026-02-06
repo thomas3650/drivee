@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developers.home-assistant.io)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(grep:*)",
+      "Bash(ruff check:*)",
+      "Bash(ls:*)",
+      "Bash(mypy:*)",
+      "Bash(bash:*)",
+      "Bash(export PYTHONPATH=\"C:\\\\sourcecode\\\\private\\\\drivee\":*)",
+      "Bash(./venv/Scripts/python -m pytest tests/test_entity.py -v)",
+      "Bash(cmd //c \"mklink /J drivee ..\")",
+      "Bash(./venv/Scripts/pip:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(tree:*)",
+      "Bash(./venv/Scripts/python -m pytest tests/test_entity.py::TestDriveeBaseEntity::test_get_data -v --allow-unix-socket)",
+      "Bash(curl:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebSearch",
+      "Bash(test:*)",
+      "WebFetch(domain:hacs.xyz)",
+      "Bash(xargs:*)",
+      "Bash(wc:*)",
+      "Bash(pytest:*)",
+      "WebFetch(domain:pypi.org)"
+    ]
+  }
+}

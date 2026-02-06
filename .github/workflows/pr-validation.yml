@@ -1,0 +1,126 @@
+name: Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  pull_request_target:
+    types: [opened, labeled, unlabeled, synchronize]
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-labels:
+    name: Validate PR Labels
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target'
+    steps:
+      - name: Check PR has valid label
+        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          valid-labels: 'bug, enhancement, dependencies, documentation, refactor, test'
+          invalid-labels: 'help wanted, invalid, question, wontfix'
+          pull-request-number: '${{ github.event.pull_request.number }}'
+          disable-reviews: true
+
+  validate-ruff:
+    name: With Ruff
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Ruff linting
+        uses: chartboost/ruff-action@v1
+        with:
+          args: 'check'
+
+      - name: Run Ruff formatting
+        uses: chartboost/ruff-action@v1
+        with:
+          args: 'format --check'
+
+  validate-hassfest:
+    name: With hassfest
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+  validate-hacs:
+    name: With HACS action
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+          comment: true
+        continue-on-error: true  # Brands check not required for custom integrations
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements_test.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements_test.txt
+          pip install $(python -c "import json; print(' '.join(json.load(open('custom_components/drivee/manifest.json'))['requirements']))")
+
+      - name: Run pytest with coverage
+        run: |
+          pytest tests/ \
+            --cov=custom_components.drivee \
+            --cov-report=term-missing \
+            -v
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request_target'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit on requirements
+        run: |
+          # Extract requirements from manifest.json
+          python -c "import json; print('\n'.join(json.load(open('custom_components/drivee/manifest.json'))['requirements']))" > /tmp/requirements.txt
+          pip-audit -r /tmp/requirements.txt

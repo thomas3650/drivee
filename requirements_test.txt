@@ -1,0 +1,12 @@
+# Testing framework (Home Assistant standard)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-homeassistant-custom-component>=0.13.0
+pytest-cov>=4.0.0
+
+# Home Assistant core (for test fixtures and types)
+homeassistant>=2024.1.0
+
+# Code quality tools (same as CI/CD)
+ruff>=0.1.0
+mypy>=1.0.0
