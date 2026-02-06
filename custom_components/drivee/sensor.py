@@ -67,7 +67,6 @@ class DriveeChargingStatusSensor(DriveeBaseSensorEntity):
     """Sensor for the Drivee charging status."""
 
     __slots__ = ()
-    _attr_has_entity_name: bool = True
     _attr_translation_key: str = "status"
     _attr_icon: str = "mdi:ev-station"
     _attr_device_class = None  # Plain text, no device class
@@ -83,7 +82,6 @@ class DriveeChargePointNameSensor(DriveeBaseSensorEntity):
     """Sensor for the Drivee charge point name."""
 
     __slots__ = ()
-    _attr_has_entity_name: bool = True
     _attr_translation_key: str = "charger_name"
     _attr_icon: str = "mdi:ev-station"
     _attr_device_class = None  # Plain text, no device class
@@ -99,7 +97,6 @@ class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
     """Sensor for the current charging session energy."""
 
     __slots__ = ()
-    _attr_has_entity_name = True
     _attr_translation_key = "current_session_energy"
     _attr_icon = "mdi:battery-charging-50"
     _attr_device_class = SensorDeviceClass.ENERGY
@@ -119,7 +116,6 @@ class DriveeCurrentSessionCostSensor(DriveeBaseSensorEntity):
     """Sensor for the current session cost."""
 
     __slots__ = ()
-    _attr_has_entity_name = True
     _attr_translation_key = "current_session_cost"
     _attr_icon = "mdi:cash-100"
     _attr_device_class = SensorDeviceClass.MONETARY
@@ -138,7 +134,6 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
     """Sensor for the total energy charged across all sessions."""
 
     __slots__ = ()
-    _attr_has_entity_name: bool = True
     _attr_translation_key = "total_energy"
     _attr_icon = "mdi:counter"
     _attr_device_class = SensorDeviceClass.ENERGY
@@ -285,7 +280,6 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
     """Sensor for displaying the current price information from Drivee."""
 
     __slots__ = ()
-    _attr_has_entity_name: bool = True
     _attr_translation_key: str = "current_price"
     _attr_icon: str = "mdi:currency-usd"
     _attr_device_class: str | None = None  # No standard device class for price
@@ -356,14 +350,14 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
         interval_minutes = 15
         # Use timezone-aware date for consistency
         today = dt_util.now().date()
-        timesToday = [
+        times_today = [
             (
                 datetime.datetime.combine(today, datetime.time(0, 0))
                 + datetime.timedelta(minutes=i)
             )
             for i in range(0, 24 * 60, interval_minutes)
         ]
-        timesTomorrow = [
+        times_tomorrow = [
             (
                 datetime.datetime.combine(
                     today + datetime.timedelta(days=1),
@@ -373,14 +367,14 @@ class DriveePriceSensor(DriveeBaseSensorEntity):
             )
             for i in range(0, 24 * 60, interval_minutes)
         ]
-        for today_time in timesToday:
+        for today_time in times_today:
             entry = self._get_or_create_price_entry(
                 price_periods, today_time, interval_minutes, False
             )
             prices_today.append(entry)
             price_only_today.append(entry["value"])
 
-        for tomorrow_time in timesTomorrow:
+        for tomorrow_time in times_tomorrow:
             entry = self._get_or_create_price_entry(
                 price_periods, tomorrow_time, interval_minutes, True
             )
@@ -420,7 +414,6 @@ class DriveeLastRefreshSensor(DriveeBaseSensorEntity):
     """Sensor showing the last time data was refreshed."""
 
     __slots__ = ()
-    _attr_has_entity_name = True
     _attr_translation_key = "last_refresh"
     _attr_icon = "mdi:update"
     _attr_device_class = SensorDeviceClass.TIMESTAMP

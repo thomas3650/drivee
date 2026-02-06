@@ -31,7 +31,6 @@ class DriveeForceRefreshButton(DriveeBaseEntity, ButtonEntity):
     """Button to force a coordinator refresh."""
 
     __slots__ = ()
-    _attr_has_entity_name = True
     _attr_translation_key = "force_refresh"
     _attr_icon = "mdi:refresh"
     _attr_entity_category = EntityCategory.DIAGNOSTIC

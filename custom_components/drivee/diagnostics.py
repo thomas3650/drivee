@@ -33,7 +33,7 @@ async def async_get_config_entry_diagnostics(
 
     # Session tracking
     session_tracking = {
-        "last_session_id": coordinator._last_session_id,
+        "last_session_id": coordinator.diagnostics_session_id,
         "current_session_id": getattr(
             coordinator.data.charge_point.evse.session if coordinator.data else None,
             "id",
@@ -41,17 +41,8 @@ async def async_get_config_entry_diagnostics(
         ),
     }
 
-    # Cache statistics (using cachetools)
-    cache_stats = {
-        "history_cache_size": len(coordinator._history_cache),
-        "history_cache_maxsize": coordinator._history_cache.maxsize,
-        "history_cache_ttl": coordinator._history_cache.ttl,
-        "has_cached_history": "data" in coordinator._history_cache,
-        "price_cache_size": len(coordinator._price_cache),
-        "price_cache_maxsize": coordinator._price_cache.maxsize,
-        "price_cache_ttl": coordinator._price_cache.ttl,
-        "has_cached_prices": "data" in coordinator._price_cache,
-    }
+    # Cache statistics
+    cache_stats = coordinator.diagnostics_cache_stats
 
     # Update interval info
     update_info = {

@@ -33,7 +33,6 @@ class DriveeChargingSwitch(DriveeBaseEntity, SwitchEntity):
     """Representation of a Drivee charging switch."""
 
     __slots__ = ()
-    _attr_has_entity_name = True
     _attr_translation_key = "charging_enabled"
     _attr_icon = "mdi:ev-station"
     _attr_entity_category = EntityCategory.CONFIG

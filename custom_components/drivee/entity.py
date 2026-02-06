@@ -1,9 +1,10 @@
-from __future__ import annotations
+"""Base entity for the Drivee integration."""
 
-from typing import Any
+from __future__ import annotations
 
 from drivee_client import ChargePoint, ChargingHistory, ChargingSession
 from drivee_client.models.price_periods import PricePeriods
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -19,22 +20,26 @@ class DriveeBaseEntity(CoordinatorEntity[DriveeDataUpdateCoordinator]):
 
     __slots__ = ()
 
-    def _get_data(self) -> DriveeData:
+    _attr_has_entity_name = True
+
+    def _get_data(self) -> DriveeData | None:
         """Return the current data from the coordinator.
 
         Returns:
-            DriveeData: The coordinator's current data including charge point,
-                        charging history, and price periods.
+            DriveeData | None: The coordinator's current data, or None if
+                               no data has been fetched yet.
         """
         return self.coordinator.data
 
-    def _get_charge_point(self) -> ChargePoint:
+    def _get_charge_point(self) -> ChargePoint | None:
         """Return the current charge point from the coordinator data.
 
         Returns:
-            ChargePoint: The charge point data including EVSE status and session.
+            ChargePoint | None: The charge point data, or None if unavailable.
         """
         data = self._get_data()
+        if data is None:
+            return None
         return data.charge_point
 
     def _get_current_session(self) -> ChargingSession | None:
@@ -56,17 +61,19 @@ class DriveeBaseEntity(CoordinatorEntity[DriveeDataUpdateCoordinator]):
                                     or None if unavailable.
         """
         data = self._get_data()
-        if data:
-            return data.charging_history
-        return None
+        if data is None:
+            return None
+        return data.charging_history
 
-    def _get_price_periods(self) -> PricePeriods:
+    def _get_price_periods(self) -> PricePeriods | None:
         """Return the current price periods from the coordinator data.
 
         Returns:
-            PricePeriods: The price period data with electricity prices.
+            PricePeriods | None: The price period data, or None if unavailable.
         """
         data = self._get_data()
+        if data is None:
+            return None
         return data.price_periods
 
     def _make_unique_id(self, suffix: str) -> str:
@@ -88,10 +95,9 @@ class DriveeBaseEntity(CoordinatorEntity[DriveeDataUpdateCoordinator]):
         self._attr_unique_id = self._make_unique_id(self._attr_translation_key)
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> DeviceInfo:
         """Return device information so HA groups all entities under one device."""
-
-        return {
-            "identifiers": {(DOMAIN, "DRIVEE")},
-            "name": "Drivee Charger",
-        }
+        return DeviceInfo(
+            identifiers={(DOMAIN, "DRIVEE")},
+            name="Drivee Charger",
+        )

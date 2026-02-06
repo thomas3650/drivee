@@ -87,7 +87,6 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
             logger,
             name=name,
             update_interval=update_interval,
-            update_method=self._update_data,
             config_entry=config_entry,
         )
         self.client = client
@@ -99,6 +98,25 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
 
         self._last_session_id = None
         self.last_update_success_time = None
+
+    @property
+    def diagnostics_session_id(self) -> str | None:
+        """Return the last known session ID for diagnostics."""
+        return self._last_session_id
+
+    @property
+    def diagnostics_cache_stats(self) -> dict[str, object]:
+        """Return cache statistics for diagnostics."""
+        return {
+            "history_cache_size": len(self._history_cache),
+            "history_cache_maxsize": self._history_cache.maxsize,
+            "history_cache_ttl": self._history_cache.ttl,
+            "has_cached_history": "data" in self._history_cache,
+            "price_cache_size": len(self._price_cache),
+            "price_cache_maxsize": self._price_cache.maxsize,
+            "price_cache_ttl": self._price_cache.ttl,
+            "has_cached_prices": "data" in self._price_cache,
+        }
 
     async def _async_fetch_charge_point(self) -> ChargePoint:
         """Fetch charge point data from the API.
@@ -169,7 +187,7 @@ class DriveeDataUpdateCoordinator(DataUpdateCoordinator[DriveeData]):
         self._price_cache["data"] = data
         return data
 
-    async def _update_data(self) -> DriveeData:
+    async def _async_update_data(self) -> DriveeData:
         """Fetch data from API and build DriveeData.
 
         Adjust the update interval dynamically based on charging state.
