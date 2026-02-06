@@ -1,3 +1,0 @@
-[submodule "client/drivee_client_repo"]
-	path = client/drivee_client_repo
-	url = https://github.com/thomas3650/driveeClient
