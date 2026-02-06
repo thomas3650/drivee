@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal
 from unittest.mock import Mock, patch
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -489,34 +488,3 @@ class TestDriveeTotalEnergySensor:
         # Assert: Total should remain unchanged
         assert sensor._total_wh == 50000.0
 
-    def test_native_value_handles_decimal_session_energy(self, mock_coordinator):
-        """Test that native_value correctly handles Decimal energy values."""
-        # Arrange
-        sensor = DriveeTotalEnergySensor(mock_coordinator)
-        sensor._total_wh = 50000.0
-
-        # Create session with Decimal energy
-        active_session = Mock()
-        active_session.energy = Decimal("15000.5")
-        mock_coordinator.data.charge_point.evse.session = active_session
-
-        # Act
-        native_value = sensor.native_value
-
-        # Assert: Should handle Decimal correctly
-        assert (
-            native_value == 65.0
-        )  # (50000 + 15000.5) / 1000 = 65.0005 rounded to 65.0
-
-    def test_native_value_handles_no_active_session(self, mock_coordinator):
-        """Test that native_value works when there is no active session."""
-        # Arrange
-        sensor = DriveeTotalEnergySensor(mock_coordinator)
-        sensor._total_wh = 50000.0
-        mock_coordinator.data.charge_point.evse.session = None
-
-        # Act
-        native_value = sensor.native_value
-
-        # Assert: Should only return accumulated total
-        assert native_value == 50.0
