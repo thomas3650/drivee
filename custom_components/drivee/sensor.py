@@ -134,7 +134,7 @@ class DriveeTotalEnergySensor(DriveeBaseSensorEntity, RestoreEntity):
     """Sensor for the total energy charged across all sessions."""
 
     __slots__ = ()
-    _attr_translation_key = "total_energy"
+    _attr_translation_key = "total_energy_2"
     _attr_icon = "mdi:counter"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
