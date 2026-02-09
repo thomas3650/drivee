@@ -19,7 +19,7 @@ This is a **Home Assistant custom integration** for monitoring and controlling a
 - **HACS distribution**: Installable via Home Assistant Community Store
 - **Python 3.11+** with Home Assistant framework
 
-**Distribution:** HACS with `content_in_root: true` (files in repository root, not subdirectory)
+**Distribution:** HACS (files in `custom_components/drivee/` subdirectory, standard HACS structure)
 
 ## Home Assistant Compliance
 
@@ -106,103 +106,51 @@ Entity Platforms (Sensors, Switches, Buttons, Binary Sensors)
 
 **Why coordinator pattern:** Centralizes data fetching, provides caching, handles errors consistently, prevents duplicate API calls from multiple entities.
 
-### Component Roles
-
-| Component | Responsibility |
-|-----------|----------------|
-| `__init__.py` | Integration entry point, platform setup, client initialization |
-| `coordinator.py` | Data fetching, caching, dynamic polling intervals |
-| `entity.py` | Base entity class with shared device_info and helper methods |
-| `config_flow.py` | UI-based setup flow with credential validation |
-| `sensor.py` | 7 sensors: status, energy, cost, price forecasting |
-| `binary_sensor.py` | Connection and charging state indicators |
-| `switch.py` | Start/stop charging control |
-| `button.py` | Force refresh button |
-
 ## Integration-Specific Patterns
 
 ### 1. Smart Caching (coordinator.py)
 
-**Why:** API rate limiting and reduced cloud load
+**Why:** API rate limiting and reduced cloud load.
 
-**Implementation:**
-- Charge point data: fetched every update cycle (always fresh)
-- Charging history: cached 1 hour (historical data doesn't change frequently)
-- Price periods: cached 1 hour (price updates are infrequent)
-
-**Cache Invalidation:** Session ID change triggers immediate cache clear for history/prices
-
-**Pattern:** TTLCache with 1-hour expiration, check cache first, fallback to API, store result
+**Pattern:** Charge point data is fetched every update cycle (always fresh). Charging history and price periods use TTLCache with time-based expiration since historical data doesn't change frequently. Cache is invalidated when session ID changes (new charging session started).
 
 ### 2. Dynamic Polling (coordinator.py)
 
-**Why:** Balance real-time updates during charging vs. reduced API load when idle
+**Why:** Balance real-time updates during charging vs. reduced API load when idle.
 
-**Implementation:**
-- **Active charging:** 30-second updates (near real-time monitoring)
-- **Idle state:** 10-minute updates (minimal API calls)
-
-**Trigger:** `charge_point.evse.is_charging` boolean determines interval
-
-**Pattern:** Coordinator adjusts `update_interval` dynamically in `_async_update_data()`
+**Pattern:** Coordinator adjusts `update_interval` dynamically in `_async_update_data()` based on `charge_point.evse.is_charging` state. Active charging uses short intervals (near real-time), idle state uses long intervals (minimal API calls). Check coordinator.py for specific timing values.
 
 ### 3. Timezone Handling (sensor.py - DriveePriceSensor)
 
-**⚠️ CRITICAL: DO NOT REMOVE THIS WORKAROUND**
+**⚠️ CRITICAL: DO NOT REMOVE THE DST WORKAROUND**
 
-**Why:** Provider API sends times 1 hour ahead during winter (non-DST)
+**Issue:** Provider API sends price period times 1 hour ahead during winter (standard time, non-DST). The `_local_iso()` method in `DriveePriceSensor` contains a workaround that subtracts 1 hour during standard time.
 
-**Issue:** Price period times are incorrect during standard time (not daylight saving time)
+**Why this matters:** Without this workaround, price periods will be misaligned by 1 hour during winter months, breaking price-based automation.
 
-**Workaround:**
-```python
-if not local_dt.dst():
-    # Subtract 1 hour during standard time
-    local_dt = local_dt - timedelta(hours=1)
-```
-
-**Location:** `_local_iso()` method in `sensor.py:DriveePriceSensor`
-
-**DO NOT REMOVE** - Required for correct price timing in winter months
+**Do not generalize:** This is intentionally hardcoded for Copenhagen timezone as a personal integration.
 
 ### 4. State Restoration (sensor.py - DriveeTotalEnergySensor)
 
-**Why:** Persist cumulative energy total across Home Assistant restarts
+**Why:** Persist cumulative energy total across Home Assistant restarts without double-counting.
 
-**Implementation:**
-- Stores `_total_wh` and `last_finished_session_end` in `extra_state_attributes`
-- Overrides `async_added_to_hass()` to restore from previous state
-- Tracks last finished session to avoid double-counting energy
-
-**Pattern:** Use `extra_restore_state_data` for internal state that shouldn't be visible as regular attributes
+**Pattern:** `DriveeTotalEnergySensor` uses `RestoreEntity` to save/restore `_total_wh` and `last_finished_session_end`. Only sessions that finish after the last tracked session are added to the total. On first initialization, historical sessions are marked as processed without adding their energy.
 
 **Reference:** https://developers.home-assistant.io/docs/core/entity/#restoring-entity-state
 
 ### 5. Price Forecasting (sensor.py - DriveePriceSensor)
 
-**Why:** Enable automation based on future electricity prices (charge when cheap)
+**Why:** Enable automation based on future electricity prices (charge when cheapest).
 
-**Data:** 15-minute interval price data for today/tomorrow
+**Pattern:** Current sensor state shows the current 15-min interval price. Future prices for today/tomorrow are exposed in state attributes (`today`, `tomorrow` arrays) for use in automations.
 
-**Attributes:**
-- `today` / `tomorrow`: Simple price arrays (floats only)
-- `raw_today` / `raw_tomorrow`: Full objects with timestamps
+### 6. Personal Configuration (DO NOT GENERALIZE)
 
-**Fallback:** Returns 0.0 for today, 10.0 for tomorrow if no data available
+This is a **personal integration** for the Danish market:
+- **Currency:** Hardcoded to Danish kroner (kr)
+- **Timezone:** Hardcoded to Copenhagen timezone (required for DST workaround)
 
-**Pattern:** Current state = current 15-min interval price, future prices in attributes for automation
-
-### 6. Personal Configuration (DO NOT CHANGE)
-
-**Currency:**
-- Hardcoded to Danish kroner (kr) throughout
-- Used in: `DriveeCurrentSessionCostSensor`, `DriveePriceSensor`
-- **Intentional:** This is a personal integration for Danish market
-
-**Timezone:**
-- Hardcoded to Copenhagen timezone
-- **Intentional:** Personal integration, timezone workaround is specific to this region
-- **DO NOT GENERALIZE:** The DST workaround is required for correct API behavior
+**Do not generalize** these settings - the timezone workaround is specific to this region's API behavior.
 
 ## Development Workflow
 
@@ -212,19 +160,10 @@ if not local_dt.dst():
 
 **Setup:**
 1. Copy integration to `<home-assistant-config>/custom_components/drivee/`
-2. Restart Home Assistant (Settings > System > Restart)
-3. Add integration (Settings > Devices & Services > Add Integration > "Drivee")
+2. Restart Home Assistant
+3. Add integration via UI (search for "Drivee")
 
-**Debug Logging** in `configuration.yaml`:
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.drivee: debug
-    drivee_client: debug  # External library logs
-```
-
-**View Logs:** Settings > System > Logs or check `home-assistant.log`
+**Debug Logging:** Enable debug logging for `custom_components.drivee` and `drivee_client` in `configuration.yaml`. View logs via UI or `home-assistant.log`.
 
 ### Version Management
 
@@ -241,53 +180,13 @@ logger:
 
 ### HACS Distribution
 
-Configuration in `hacs.json`:
-```json
-{
-  "name": "Drivee",
-  "content_in_root": true,
-  "render_readme": true
-}
-```
-
-**Note:** `content_in_root: true` means integration files are in repository root, not in a subdirectory.
-
-## Key Files Reference
-
-| File | Purpose |
-|------|---------|
-| `__init__.py` | Integration entry point, platform setup |
-| `coordinator.py` | Data fetching, caching, dynamic polling |
-| `entity.py` | Base entity with shared functionality |
-| `const.py` | Domain constant and configuration keys |
-| `config_flow.py` | UI-based configuration flow |
-| `sensor.py` | 7 sensor entities (largest file, 16KB) |
-| `binary_sensor.py` | 2 binary sensors (connection, charging) |
-| `switch.py` | Charging control switch |
-| `button.py` | Force refresh button |
-| `manifest.json` | Integration metadata, dependencies, version |
-| `strings.json` | UI text and translations |
-| `translations/en.json` | English translations |
+Integration files are in `custom_components/drivee/` subdirectory (standard HACS structure). HACS configuration is in `hacs.json` at repository root.
 
 ## External Dependencies
 
-### driveeClient Library
-- **Repository:** https://github.com/thomas3650/driveeClient
-- **Version:** 0.1.4 (pinned in manifest.json)
-- **Purpose:** Handles all Drivee API communication and authentication
-- **Key Classes:** `DriveeClient`, `ChargePoint`, `ChargingHistory`, `ChargingSession`, `PricePeriods`
-
-### Other Dependencies
-- `aiohttp>=3.12.15`: Async HTTP client
-- `tenacity>=8.0.0`: Retry logic for API calls
-- `pydantic>=2.11.7`: Data validation and modeling
+**driveeClient Library:** All API communication goes through [driveeClient](https://github.com/thomas3650/driveeClient). Check `manifest.json` for pinned versions of all dependencies.
 
 ## Common Patterns
-
-### Energy Units
-- **API returns:** Wh (watt-hours)
-- **Display to users:** kWh (kilowatt-hours)
-- **Conversion:** `energy_kwh = energy_wh / 1000`
 
 ### Type Hints
 - Use `from __future__ import annotations` at top of every file
