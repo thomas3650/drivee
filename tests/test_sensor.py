@@ -191,7 +191,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
 
         # Create a mock state with invalid datetime format
         mock_state = Mock(spec=State)
