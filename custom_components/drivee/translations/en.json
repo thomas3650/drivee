@@ -45,7 +45,7 @@
             "current_power": {
                 "name": "Current power"
             },
-            "total_energy": {
+            "total_energy_2": {
                 "name": "Total energy"
             },
             "current_price": {

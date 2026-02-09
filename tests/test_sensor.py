@@ -39,7 +39,7 @@ class TestDriveeTotalEnergySensor:
         sensor = DriveeTotalEnergySensor(mock_coordinator)
 
         # Assert
-        assert sensor._attr_translation_key == "total_energy"
+        assert sensor._attr_translation_key == "total_energy_2"
         assert sensor._attr_icon == "mdi:counter"
         assert sensor._attr_device_class == SensorDeviceClass.ENERGY
         assert sensor._attr_native_unit_of_measurement == UnitOfEnergy.KILO_WATT_HOUR
@@ -53,7 +53,7 @@ class TestDriveeTotalEnergySensor:
         sensor = DriveeTotalEnergySensor(mock_coordinator)
 
         # Assert
-        assert sensor.unique_id == "Drivee_total_energy"
+        assert sensor.unique_id == "Drivee_total_energy_2"
 
     def test_initial_state(self, mock_coordinator):
         """Test sensor initial state is zero."""
@@ -103,7 +103,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
 
         # Mock async_get_last_state to return None (first initialization)
         with patch.object(sensor, "async_get_last_state", return_value=None):
@@ -153,7 +153,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
 
         # Mock async_get_last_state to return None (first initialization)
         with patch.object(sensor, "async_get_last_state", return_value=None):
@@ -227,7 +227,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
 
         # Create a mock state with valid data
         mock_state = Mock(spec=State)
@@ -284,7 +284,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
 
         # Set up sensor with existing state
         sensor._total_wh = 50000.0  # Already counted session-old
@@ -343,7 +343,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
 
         # Manually set the accumulated total (simulating finished sessions were not added on init)
         sensor._total_wh = 0.0
@@ -447,7 +447,7 @@ class TestDriveeTotalEnergySensor:
 
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
         sensor._total_wh = 0.0
         sensor._last_finished_session_end = last_processed
 
@@ -476,7 +476,7 @@ class TestDriveeTotalEnergySensor:
         mock_coordinator.data = None
         sensor = DriveeTotalEnergySensor(mock_coordinator)
         sensor.hass = hass
-        sensor.entity_id = "sensor.drivee_total_energy"
+        sensor.entity_id = "sensor.drivee_total_energy_2"
         sensor._total_wh = 50000.0
 
         with patch.object(sensor, "async_get_last_state", return_value=None):
