@@ -25,7 +25,8 @@
       "Bash(xargs:*)",
       "Bash(wc:*)",
       "Bash(pytest:*)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(dir:*)"
     ]
   }
 }

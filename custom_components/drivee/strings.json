@@ -42,6 +42,9 @@
       "current_session_cost": {
         "name": "Current session cost"
       },
+      "current_power": {
+        "name": "Current power"
+      },
       "total_energy": {
         "name": "Total energy"
       },

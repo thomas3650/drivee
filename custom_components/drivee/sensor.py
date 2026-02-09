@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy
+from homeassistant.const import UnitOfEnergy, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -38,6 +38,7 @@ async def async_setup_entry(
         [
             DriveeChargePointNameSensor(coordinator),
             DriveeCurrentSessionEnergySensor(coordinator),
+            DriveeCurrentPowerSensor(coordinator),
             DriveeTotalEnergySensor(coordinator),
             DriveeCurrentSessionCostSensor(coordinator),
             DriveePriceSensor(coordinator),
@@ -100,16 +101,37 @@ class DriveeCurrentSessionEnergySensor(DriveeBaseSensorEntity):
     _attr_translation_key = "current_session_energy"
     _attr_icon = "mdi:battery-charging-50"
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_suggested_display_precision: int = 2
 
     @property
     def native_value(self) -> float:
-        """Return the energy of the last charging session in kWh, or None if unavailable."""
+        """Return the energy of the current charging session in kWh."""
         session = self._get_current_session()
         if not session:
             return float(0)
-        return round(float(session.energy) / 1000, 1)
+        return round(float(session.energy) / 1000, 2)
+
+
+class DriveeCurrentPowerSensor(DriveeBaseSensorEntity):
+    """Sensor for the current charging power draw."""
+
+    __slots__ = ()
+    _attr_translation_key = "current_power"
+    _attr_icon = "mdi:flash"
+    _attr_device_class = SensorDeviceClass.POWER
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfPower.KILO_WATT
+    _attr_suggested_display_precision: int = 2
+
+    @property
+    def native_value(self) -> float:
+        """Return the current power draw in kilowatts."""
+        session = self._get_current_session()
+        if not session:
+            return 0
+        return round(float(session.power / 1000), 2)
 
 
 class DriveeCurrentSessionCostSensor(DriveeBaseSensorEntity):
