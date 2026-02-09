@@ -13,7 +13,7 @@
     "aiohttp>=3.12.15",
     "tenacity>=8.0.0",
     "pydantic>=2.11.7",
-    "driveeClient==0.1.4",
+    "driveeClient==0.1.6",
     "cachetools>=5.3.0"
   ],
   "version": "0.1.8"
